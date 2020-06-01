@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{874E981F-511B-4AB9-9D8D-D9EF9CEF8E92}</ProjectGuid>
+    <RootNamespace>Hrp</RootNamespace>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="debug|Win32">
+      <Configuration>debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="release|Win32">
+      <Configuration>release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="debug|x64">
+      <Configuration>debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="release|x64">
+      <Configuration>release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props"/>
+  <PropertyGroup>
+    <PlatformString Condition="'$(Platform)'=='Win32'">winnt_vc140</PlatformString>
+    <PlatformString Condition="'$(Platform)'=='x64'">winnt64_vc140</PlatformString>
+    <ConfigurationString Condition="$(Configuration.Contains('release'))Or$(Configuration.Contains('Release'))">release</ConfigurationString>
+    <ConfigurationString Condition="$(Configuration.Contains('debug'))Or$(Configuration.Contains('Debug'))">debug</ConfigurationString>
+    <ModuleString>_dynamic_</ModuleString>
+    <ConfigurationType Condition="'$(ModuleString)'=='_'">Application</ConfigurationType>
+    <ConfigurationType Condition="'$(ModuleString)'=='_dynamic_'">DynamicLibrary</ConfigurationType>
+    <ConfigurationType Condition="'$(ModuleString)'=='_static_'">StaticLibrary</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+    <UseDebugLibraries Condition="'$(ConfigurationString)'=='release'">false</UseDebugLibraries>
+    <UseDebugLibraries Condition="'$(ConfigurationString)'=='debug'">true</UseDebugLibraries>
+    <WholeProgramOptimization Condition="'$(ConfigurationString)'=='release'">true</WholeProgramOptimization>
+    <WholeProgramOptimization Condition="'$(ConfigurationString)'=='debug'">false</WholeProgramOptimization>
+    <TargetName Condition="'$(ModuleString)'=='_static_'">$(ProjectName)_MT$(ConfigurationString.Replace('release','').Replace('debug','d'))</TargetName>
+    <OutDir>bin\$(PlatformString)$(ModuleString)$(ConfigurationString)\</OutDir>
+    <IntDir>obj\$(PlatformString)$(ModuleString)$(ConfigurationString)\</IntDir>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props"/>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <Optimization Condition="'$(ConfigurationString)'=='release'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(ConfigurationString)'=='debug'">Disabled</Optimization>
+      <IntrinsicFunctions Condition="'$(ConfigurationString)'=='release'">true</IntrinsicFunctions>
+      <WarningLevel>Level3</WarningLevel>
+      <AdditionalIncludeDirectories>.;..\..\..\_\_poco\include</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(ModuleString)'=='_'">_CONSOLE;$(ConfigurationString.Replace('release','N').Replace('debug','_'))DEBUG</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(ModuleString)'=='_dynamic_'">_USRDLL;$(ConfigurationString.Replace('release','N').Replace('debug','_'))DEBUG</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(ModuleString)'=='_static_'">_LIB;$(ConfigurationString.Replace('release','N').Replace('debug','_'))DEBUG</PreprocessorDefinitions>
+      <RuntimeLibrary Condition="'$(ConfigurationString)'=='release'">MultiThreaded</RuntimeLibrary>
+      <RuntimeLibrary Condition="'$(ConfigurationString)'=='debug'">MultiThreadedDebug</RuntimeLibrary>
+      <BasicRuntimeChecks Condition="'$(ConfigurationString)'=='debug'">EnableFastChecks</BasicRuntimeChecks>
+      <MinimalRebuild>false</MinimalRebuild>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <ProgramDataBaseFileName>$(OutDir)$(TargetName).pdb</ProgramDataBaseFileName>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <AdditionalOptions></AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <SubSystem Condition="'$(ModuleString)'=='_'">Console</SubSystem>
+      <SubSystem Condition="'$(ModuleString)'=='_dynamic_'">Windows</SubSystem>
+      <OptimizeReferences Condition="'$(ConfigurationString)'=='release'">true</OptimizeReferences>
+      <EnableCOMDATFolding Condition="'$(ConfigurationString)'=='release'">true</EnableCOMDATFolding>
+      <GenerateDebugInformation Condition="'$(ConfigurationString)'=='release'">false</GenerateDebugInformation>
+      <GenerateDebugInformation Condition="'$(ConfigurationString)'=='debug'">true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>..\..\..\_\_poco\lib\$(PlatformString)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>user32.lib;advapi32.lib;ws2_32.lib;iphlpapi.lib;crypt32.lib</AdditionalDependencies>
+    </Link>
+    <PostBuildEvent>
+      <Command>mkdir ..\bin\$(PlatformString)_$(ConfigurationString) &gt;nul 2&gt;&amp;1
+copy bin\$(PlatformString)$(ModuleString)$(ConfigurationString)\$(TargetName).dll ..\bin\$(PlatformString)_$(ConfigurationString)
+copy bin\$(PlatformString)$(ModuleString)$(ConfigurationString)\$(TargetName).lib ..\bin\$(PlatformString)_$(ConfigurationString)</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets"/>
+  <ItemGroup>
+    <ClCompile Include="com\amivoice\hrp\Hrp.cpp"/>
+    <ClInclude Include="com\amivoice\hrp\Hrp.h"/>
+    <ClCompile Include="com\amivoice\hrp\Hrp_.cpp"/>
+    <ClInclude Include="com\amivoice\hrp\Hrp_.h"/>
+    <ClInclude Include="com\amivoice\hrp\HrpListener.h"/>
+  </ItemGroup>
+</Project>

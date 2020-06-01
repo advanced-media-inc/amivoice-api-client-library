@@ -1,0 +1,910 @@
+#include <stdio.h>
+#include <string.h>
+#include <stdarg.h>
+#if defined(_WIN32)
+ #include <windows.h>
+ #define _CRTDBG_MAP_ALLOC
+ #include <crtdbg.h>
+#else
+ #include <fcntl.h>
+ #include <time.h>
+ #include <unistd.h>
+ #include <sys/stat.h>
+ #include <sys/time.h>
+ #define _stricmp strcasecmp
+ #define fopen_s(f,n,m) ((*(f))=fopen((n),(m)))==NULL
+#endif
+#include "com/amivoice/hrp/Hrp.h"
+#include "com/amivoice/hrp/HrpListener.h"
+
+// Pointer<T> class
+template<typename T>
+class Pointer {
+  private:
+	T* p_;
+  public:
+	Pointer(T* p) {
+		p_ = p;
+	}
+	~Pointer() {
+		if (p_ != NULL) {
+			delete p_;
+			p_ = NULL;
+		}
+	}
+	T& operator=(T* p) {
+		if (p_ != NULL) {
+			delete p_;
+			p_ = NULL;
+		}
+		p_ = p;
+		return *this;
+	}
+	T* operator->() {
+		return p_;
+	}
+	operator T*() {
+		return p_;
+	}
+};
+
+// String class
+class String {
+  private:
+	char* p_;
+	char* pUTF8_;
+	bool necessaryToDelete_;
+  public:
+	String() {
+		p_ = NULL;
+		pUTF8_ = NULL;
+		necessaryToDelete_ = false;
+	}
+	String(const char* p) {
+		p_ = pUTF8_ = const_cast<char*>(p);
+		necessaryToDelete_ = false;
+	}
+	~String() {
+		if (necessaryToDelete_) {
+			if (p_ != NULL) {
+				delete[] p_;
+				p_ = NULL;
+			}
+			if (pUTF8_ != NULL) {
+				delete[] pUTF8_;
+				pUTF8_ = NULL;
+			}
+			necessaryToDelete_ = false;
+		}
+	}
+	String& from(const char* p) {
+		if (necessaryToDelete_) {
+			if (p_ != NULL) {
+				delete[] p_;
+				p_ = NULL;
+			}
+			if (pUTF8_ != NULL) {
+				delete[] pUTF8_;
+				pUTF8_ = NULL;
+			}
+			necessaryToDelete_ = false;
+		}
+		if (p != NULL) {
+#if defined(_WIN32)
+			int pLength = (int)strlen(p) + 1;
+			p_ = new char[pLength];
+			memcpy(p_, p, pLength);
+			int pLengthUNICODE = ::MultiByteToWideChar(CP_ACP, 0, p, pLength, NULL, 0);
+			wchar_t* pUNICODE = new wchar_t[pLengthUNICODE];
+			::MultiByteToWideChar(CP_ACP, 0, p, pLength, pUNICODE, pLengthUNICODE);
+			int pLengthUTF8 = ::WideCharToMultiByte(CP_UTF8, 0, pUNICODE, pLengthUNICODE, NULL, 0, NULL, NULL);
+			pUTF8_ = new char[pLengthUTF8];
+			::WideCharToMultiByte(CP_UTF8, 0, pUNICODE, pLengthUNICODE, pUTF8_, pLengthUTF8, NULL, NULL);
+			delete[] pUNICODE;
+			necessaryToDelete_ = true;
+#else
+			p_ = pUTF8_ = const_cast<char*>(p);
+#endif
+		}
+		return *this;
+	}
+	String& fromUTF8(const char* pUTF8) {
+		if (necessaryToDelete_) {
+			if (p_ != NULL) {
+				delete[] p_;
+				p_ = NULL;
+			}
+			if (pUTF8_ != NULL) {
+				delete[] pUTF8_;
+				pUTF8_ = NULL;
+			}
+			necessaryToDelete_ = false;
+		}
+		if (pUTF8 != NULL) {
+#if defined(_WIN32)
+			int pLengthUTF8 = (int)strlen(pUTF8) + 1;
+			pUTF8_ = new char[pLengthUTF8];
+			memcpy(pUTF8_, pUTF8, pLengthUTF8);
+			int pLengthUNICODE = ::MultiByteToWideChar(CP_UTF8, 0, pUTF8, pLengthUTF8, NULL, 0);
+			wchar_t* pUNICODE = new wchar_t[pLengthUNICODE];
+			::MultiByteToWideChar(CP_UTF8, 0, pUTF8, pLengthUTF8, pUNICODE, pLengthUNICODE);
+			int pLength = ::WideCharToMultiByte(CP_ACP, 0, pUNICODE, pLengthUNICODE, NULL, 0, NULL, NULL);
+			p_ = new char[pLength];
+			::WideCharToMultiByte(CP_ACP, 0, pUNICODE, pLengthUNICODE, p_, pLength, NULL, NULL);
+			delete[] pUNICODE;
+			necessaryToDelete_ = true;
+#else
+			p_ = pUTF8_ = const_cast<char*>(pUTF8);
+#endif
+		}
+		return *this;
+	}
+	String& fromUTF16(const unsigned short* pUTF16) {
+		if (necessaryToDelete_) {
+			if (p_ != NULL) {
+				delete[] p_;
+				p_ = NULL;
+			}
+			if (pUTF8_ != NULL) {
+				delete[] pUTF8_;
+				pUTF8_ = NULL;
+			}
+			necessaryToDelete_ = false;
+		}
+		if (pUTF16 != NULL) {
+			int pLengthUTF8 = 0;
+			const unsigned short* pPointerUTF16 = pUTF16;
+			unsigned short c = *pPointerUTF16++;
+			while (c != 0) {
+				if ((c & 0xFF80) == 0x0000) {
+					// 00000000 0yyyyyyy
+					pLengthUTF8++;
+				} else
+				if ((c & 0xF800) == 0x0000) {
+					// 00000xxx yyyyyyyy
+					pLengthUTF8 += 2;
+				} else {
+					if ((c & 0xFC00) == 0xD800) {
+						unsigned short cc = *pPointerUTF16++;
+						if (cc != 0) {
+							if ((cc & 0xFC00) == 0xDC00) {
+								// 110110ZZ ZZxxxxxx 110111xx yyyyyyyy
+								pLengthUTF8 += 4;
+								c = *pPointerUTF16++;
+								continue;
+							}
+						}
+					}
+					// xxxxxxxx yyyyyyyy
+					pLengthUTF8 += 3;
+				}
+				c = *pPointerUTF16++;
+			}
+			pLengthUTF8++;
+			pUTF8_ = new char[pLengthUTF8];
+			pLengthUTF8 = 0;
+			pPointerUTF16 = pUTF16;
+			c = *pPointerUTF16++;
+			while (c != 0) {
+				if ((c & 0xFF80) == 0x0000) {
+					// 00000000 0yyyyyyy → 1 バイト文字 0yyyyyyy
+					pUTF8_[pLengthUTF8++] = (char)(c & 0x007F);
+				} else
+				if ((c & 0xF800) == 0x0000) {
+					// 00000xxx yyyyyyyy → 2 バイト文字 110xxxyy 10yyyyyy
+					pUTF8_[pLengthUTF8++] = (char)(0xC0 | ((c >> 6) & 0x1F));
+					pUTF8_[pLengthUTF8++] = (char)(0x80 | ((c     ) & 0x3F));
+				} else {
+					if ((c & 0xFC00) == 0xD800) {
+						unsigned short cc = *pPointerUTF16++;
+						if (cc != 0) {
+							if ((cc & 0xFC00) == 0xDC00) {
+								// 110110ZZ ZZxxxxxx 110111xx yyyyyyyy → 4 バイト文字 11110zzz 10zzxxxx 10xxxxyy 10yyyyyy
+								pUTF8_[pLengthUTF8++] = (char)(0xF0 | (((((c >> 6) & 0xF) + 1) >> 2) & 0x07));
+								pUTF8_[pLengthUTF8++] = (char)(0x80 | (((((c >> 6) & 0xF) + 1) << 4) & 0x30) | ((c >> 2) & 0x0F));
+								pUTF8_[pLengthUTF8++] = (char)(0x80 | ((c << 4) & 0x30) | ((cc >> 6) & 0x0F));
+								pUTF8_[pLengthUTF8++] = (char)(0x80 | (cc & 0x3F));
+								c = *pPointerUTF16++;
+								continue;
+							}
+						}
+					}
+					// xxxxxxxx yyyyyyyy → 3 バイト文字 1110xxxx 10xxxxyy 10yyyyyy
+					pUTF8_[pLengthUTF8++] = (char)(0xE0 | ((c >> 12) & 0x0F));
+					pUTF8_[pLengthUTF8++] = (char)(0x80 | ((c >>  6) & 0x3F));
+					pUTF8_[pLengthUTF8++] = (char)(0x80 | ((c      ) & 0x3F));
+				}
+				c = *pPointerUTF16++;
+			}
+			pUTF8_[pLengthUTF8++] = 0;
+#if defined(_WIN32)
+			int pLength = ::WideCharToMultiByte(CP_ACP, 0, reinterpret_cast<const wchar_t*>(pUTF16), -1, NULL, 0, NULL, NULL);
+			p_ = new char[pLength];
+			::WideCharToMultiByte(CP_ACP, 0, reinterpret_cast<const wchar_t*>(pUTF16), -1, p_, pLength, NULL, NULL);
+#else
+			int pLength = pLengthUTF8;
+			p_ = new char[pLength];
+			memcpy(p_, pUTF8_, pLengthUTF8);
+#endif
+			necessaryToDelete_ = true;
+		}
+		return *this;
+	}
+	const char* to() const {
+		return p_;
+	}
+	const char* toUTF8() const {
+		return pUTF8_;
+	}
+	operator const char*() const {
+		return p_;
+	}
+	bool startsWith(const char* prefix) const {
+		size_t pLength = strlen(p_);
+		size_t prefixLength = strlen(prefix);
+		return (pLength - prefixLength >= 0 && strncmp(p_, prefix, prefixLength) == 0);
+	}
+	bool endsWith(const char* suffix) const {
+		size_t pLength = strlen(p_);
+		size_t suffixLength = strlen(suffix);
+		return (pLength - suffixLength >= 0 && strncmp(p_ + (pLength - suffixLength), suffix, suffixLength) == 0);
+	}
+	int indexOf(const char* string) const {
+		char* pPointer = strstr(p_, string);
+		if (pPointer == NULL) {
+			return -1;
+		}
+		return static_cast<int>(pPointer - p_);
+	}
+	int lastIndexOf(const char* string) const {
+		char* pLastPointer = NULL;
+		char* pPointer = strstr(p_, string);
+		while (pPointer != NULL) {
+			pLastPointer = pPointer;
+			pPointer = strstr(pPointer + strlen(string), string);
+		}
+		if (pLastPointer == NULL) {
+			return -1;
+		}
+		return static_cast<int>(pLastPointer - p_);
+	}
+	int length() const {
+		return (int)strlen(p_);
+	}
+};
+
+// StringList class
+class StringList {
+  private:
+	const String** strings_;
+	bool* deletables_;
+	int capacity_;
+	int size_;
+  public:
+	StringList() {
+		strings_ = NULL;
+		deletables_ = NULL;
+		capacity_ = 0;
+		size_ = 0;
+	}
+	~StringList() {
+		for (int i = 0; i < size_; i++) {
+			if (deletables_[i]) {
+				delete const_cast<String*>(strings_[i]);
+			}
+			strings_[i] = NULL;
+		}
+		if (strings_ != NULL) {
+			free(strings_);
+			strings_ = NULL;
+		}
+		if (deletables_ != NULL) {
+			free(deletables_);
+			deletables_ = NULL;
+		}
+	}
+	void ensureCapacity(int capacity) {
+		if (capacity > capacity_) {
+			const String** strings = (const String**)malloc(capacity * sizeof(const String*));
+			memset(strings, 0, capacity * sizeof(const String*));
+			if (size_ > 0) {
+				memcpy(strings, strings_, size_ * sizeof(const String*));
+			}
+			bool* deletables = (bool*)malloc(capacity * sizeof(bool));
+			memset(deletables, 0, capacity * sizeof(bool));
+			if (size_ > 0) {
+				memcpy(deletables, deletables_, size_ * sizeof(bool));
+			}
+			strings_ = strings;
+			deletables_ = deletables;
+			capacity_ = capacity;
+		}
+	}
+	void add(const char* p) {
+		if (size_ + 1 > capacity_) {
+			ensureCapacity(capacity_ + 16);
+		}
+		String* string = new String();
+		string->from(p);
+		strings_[size_] = string;
+		deletables_[size_] = true;
+		size_++;
+	}
+	void add(const String* string) {
+		if (size_ + 1 > capacity_) {
+			ensureCapacity(capacity_ + 16);
+		}
+		strings_[size_] = string;
+		deletables_[size_] = false;
+		size_++;
+	}
+	int size() const {
+		return size_;
+	}
+	const String* operator[](int index) const {
+		if (index < 0 || index >= size_) {
+			return NULL;
+		}
+		return strings_[index];
+	}
+};
+
+// getFileSize()
+long long getFileSize(const char* fileName) {
+	unsigned long long fileSize = 0;
+#if defined(_WIN32)
+	HANDLE fileHandle = ::CreateFileA(fileName, FILE_SHARE_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	if (fileHandle != INVALID_HANDLE_VALUE) {
+		DWORD fileSizeHigh = 0;
+		DWORD fileSizeLow = ::GetFileSize(fileHandle, &fileSizeHigh);
+		if (fileSizeLow != INVALID_FILE_SIZE) {
+			fileSize = (unsigned long long)fileSizeLow | ((unsigned long long)fileSizeHigh << 32);
+		}
+		::CloseHandle(fileHandle);
+	}
+#else
+	int fileHandle = open(fileName, O_RDONLY);
+	if (fileHandle != -1) {
+		struct stat fileStatus;
+		if (fstat(fileHandle, &fileStatus) != -1) {
+			fileSize = (unsigned long long)fileStatus.st_size;
+		}
+		close(fileHandle);
+	}
+#endif
+	return (long long)fileSize;
+}
+
+// getNanoTime()
+long long getNanoTime() {
+	unsigned long long nanoTime = 0;
+#if defined(_WIN32)
+	LARGE_INTEGER frequencyInfo;
+	::QueryPerformanceFrequency(&frequencyInfo);
+	LARGE_INTEGER counterInfo;
+	::QueryPerformanceCounter(&counterInfo);
+	unsigned long long frequency = frequencyInfo.QuadPart;
+	unsigned long long counter = counterInfo.QuadPart;
+	const unsigned long long counterBase = 0x7FFFFFFFFFFFFFFFull / 1000000000ull;
+	if (counter < counterBase) {
+		nanoTime = counter * 1000000000ull / frequency;
+	} else {
+		int counterPerFrequencyDelta = (int)(counterBase / frequency);
+		unsigned long long counterDelta = frequency * counterPerFrequencyDelta;
+		int counterPerFrequency = 0;
+		do {
+			counterPerFrequency += counterPerFrequencyDelta;
+			counter -= counterDelta;
+		} while (counter >= counterBase);
+		nanoTime = counter * 1000000000ull / frequency + 1000000000ull * counterPerFrequency;
+	}
+#else
+ #if defined(CLOCK_MONOTONIC)
+	struct timespec currentTime;
+	clock_gettime(CLOCK_MONOTONIC, &currentTime);
+	nanoTime = (unsigned long long)currentTime.tv_sec * 1000000000 + (unsigned long long)currentTime.tv_nsec;
+ #else
+	struct timeval currentTime;
+	gettimeofday(&currentTime, NULL);
+	nanoTime = (unsigned long long)currentTime.tv_sec * 1000000000 + (unsigned long long)currentTime.tv_usec * 1000;
+ #endif
+#endif
+	return (long long)nanoTime;
+}
+
+// print()
+void print(const char* format = NULL, ...) {
+	if (format != NULL) {
+		va_list args;
+		va_start(args, format);
+		vprintf(format, args);
+		va_end(args);
+	}
+	printf("\n");
+}
+
+class HrpTester : private com::amivoice::hrp::HrpListener {
+	public: static void main(const StringList& args) {
+		// HTTP 音声認識サーバ URL
+		const char* serverURL = NULL;
+		// プロキシサーバ名
+		const char* proxyServerName = NULL;
+		// 音声データファイル名
+		StringList audioFileNames;
+		// グラマファイル名
+		const char* grammarFileNames = NULL;
+		// モード
+		const char* mode = NULL;
+		// プロファイル ID
+		const char* profileId = NULL;
+		// プロファイル登録単語
+		const char* profileWords = NULL;
+		// セグメンタタイプ
+		const char* segmenterType = NULL;
+		// セグメンタプロパティ
+		const char* segmenterProperties = NULL;
+		// 認識中イベント発行間隔
+		const char* resultUpdatedInterval = NULL;
+		// 拡張情報
+		const char* extension = NULL;
+		// サービス認証キー文字列
+		const char* authorization = NULL;
+		// ドメイン ID (d=)
+		const char* domainId = NULL;
+		// 音声データ形式 (c=)
+		const char* codec = NULL;
+		// 認識結果タイプ (r=)
+		const char* resultType = NULL;
+		// 認識結果文字エンコーディング (e=)
+		const char* resultEncoding = NULL;
+		// サービス認証キー文字列 (u=)
+		const char* serviceAuthorization = NULL;
+		// 発話区間検出パラメータ文字列 (v=)
+		const char* voiceDetection = NULL;
+		// HTTP リクエストヘッダ群
+		const char* acceptTopic = NULL;
+		const char* contentType = NULL;
+		const char* accept = NULL;
+		// 処理タイプ ("s"／"sc"／"m"／"mc")
+		const char* type = "mc";
+		// 接続タイムアウト
+		int connectTimeout = 5000;
+		// 受信タイムアウト
+		int receiveTimeout = 0;
+		// 処理ループ (1～)
+		int loop = 1;
+		// スリープ時間
+		int sleepTime = 100;
+		// 詳細出力
+		bool verbose = false;
+		// 実装タイプ
+		int implementation = 1;
+
+		// 引数のチェック
+		for (int i = 0; i < args.size(); i++) {
+			const String* arg = args[i];
+			if (arg->startsWith("g=")) {
+				grammarFileNames = arg->toUTF8() + 2;
+			} else
+			if (arg->startsWith("m=")) {
+				mode = arg->toUTF8() + 2;
+			} else
+			if (arg->startsWith("i=")) {
+				profileId = arg->toUTF8() + 2;
+			} else
+			if (arg->startsWith("w=")) {
+				profileWords = arg->toUTF8() + 2;
+			} else
+			if (arg->startsWith("ot=")) {
+				segmenterType = arg->toUTF8() + 3;
+			} else
+			if (arg->startsWith("op=")) {
+				segmenterProperties = arg->toUTF8() + 3;
+			} else
+			if (arg->startsWith("oi=")) {
+				resultUpdatedInterval = arg->toUTF8() + 3;
+			} else
+			if (arg->startsWith("oe=")) {
+				extension = arg->toUTF8() + 3;
+			} else
+			if (arg->startsWith("ou=")) {
+				authorization = arg->toUTF8() + 3;
+			} else
+			if (arg->startsWith("d=")) {
+				domainId = arg->toUTF8() + 2;
+			} else
+			if (arg->startsWith("c=")) {
+				codec = arg->toUTF8() + 2;
+			} else
+			if (arg->startsWith("r=")) {
+				resultType = arg->toUTF8() + 2;
+			} else
+			if (arg->startsWith("e=")) {
+				resultEncoding = arg->toUTF8() + 2;
+			} else
+			if (arg->startsWith("u=")) {
+				serviceAuthorization = arg->toUTF8() + 2;
+			} else
+			if (arg->startsWith("v=")) {
+				voiceDetection = arg->toUTF8() + 2;
+			} else
+			if (arg->startsWith("hd=")) {
+				acceptTopic = arg->toUTF8() + 3;
+			} else
+			if (arg->startsWith("hc=")) {
+				contentType = arg->toUTF8() + 3;
+			} else
+			if (arg->startsWith("hr=")) {
+				accept = arg->toUTF8() + 3;
+			} else
+			if (arg->startsWith("-t")) {
+				type = arg->to() + 2;
+			} else
+			if (arg->startsWith("-x")) {
+				proxyServerName = arg->toUTF8() + 2;
+			} else
+			if (arg->startsWith("-c")) {
+				connectTimeout = atoi(arg->to() + 2);
+			} else
+			if (arg->startsWith("-r")) {
+				receiveTimeout = atoi(arg->to() + 2);
+			} else
+			if (arg->startsWith("-l")) {
+				loop = atoi(arg->to() + 2);
+			} else
+			if (arg->startsWith("-e")) {
+				if (arg->length() > 2) {
+					sleepTime = atoi(arg->to() + 2);
+				} else {
+					sleepTime = -1;
+				}
+			} else
+			if (arg->startsWith("-v")) {
+				verbose = true;
+			} else
+			if (arg->startsWith("-2")) {
+				implementation = 2;
+			} else
+			if (serverURL == NULL) {
+				serverURL = arg->toUTF8();
+			} else {
+				audioFileNames.add(arg);
+			}
+		}
+		if (audioFileNames.size() == 0) {
+			print("Usage: HrpTester [<parameters/options>]");
+			print("                  <url>");
+			print("                   <audioFileName>...");
+			print("Parameters:");
+			print("  g=<grammarFileNames>");
+			print("  m=<mode>");
+			print("  i=<profileId>");
+			print("  w=<profileWords>");
+			print("  ot=<segmenterType>");
+			print("  op=<segmenterProperties>");
+			print("  oi=<resultUpdatedInterval>");
+			print("  oe=<extension>");
+			print("  ou=<authorization>");
+			print("  d=<domainId>");
+			print("  c=<codec>");
+			print("  r=<resultType>");
+			print("  e=<resultEncoding>");
+			print("  u=<serviceAuthorization>");
+			print("  v=<voiceDetection>");
+			print("  hd=<acceptTopic>            HTTP 'Accept-Topic' header instead d=<domainId>");
+			print("  hc=<contentType>            HTTP 'Content-Type' header instead c=<codec>");
+			print("  hr=<accept>                 HTTP 'Accept' header instead r=<resultType>");
+			print("Options:");
+			print("  -t<type>                    (default: -tmc)");
+			print("      <type>='s'              Single part & no chunked encoding");
+			print("      <type>='sc'             Single part & chunked encoding");
+			print("      <type>='m'              Multi parts & no chunked encoding");
+			print("      <type>='mc'             Multi parts & chunked encoding");
+			print("  -x<proxyServerName>         (default: -x)");
+			print("  -c<connectionTimeout>       (default: -c5000)");
+			print("  -r<receiveTimeout>          (default: -r0)");
+			print("  -l<loop>                    (default: -l1)");
+			print("  -e                          realtime simulation (default: -)");
+			print("  -v                          verbose output (default: -)");
+			return;
+		}
+
+		// 開始時間の取得
+		long long startTime = getNanoTime();
+
+		// スリープ時間の計算
+		if (sleepTime == -1) {
+			if (codec != NULL) {
+				if (_stricmp(codec, "22K") == 0 || _stricmp(codec, "MSB22K") == 0 || _stricmp(codec, "LSB22K") == 0) {
+					sleepTime = 4096 * 1000 / 2 / 22050;
+				} else
+				if (_stricmp(codec, "16K") == 0 || _stricmp(codec, "MSB16K") == 0 || _stricmp(codec, "LSB16K") == 0) {
+					sleepTime = 4096 * 1000 / 2 / 16000;
+				} else
+				if (_stricmp(codec, "11K") == 0 || _stricmp(codec, "MSB11K") == 0 || _stricmp(codec, "LSB11K") == 0) {
+					sleepTime = 4096 * 1000 / 2 / 11025;
+				} else
+				if (_stricmp(codec, "8K") == 0 || _stricmp(codec, "MSB8K") == 0 || _stricmp(codec, "LSB8K") == 0) {
+					sleepTime = 4096 * 1000 / 2 / 8000;
+				} else
+				if (_stricmp(codec, "MULAW") == 0 || _stricmp(codec, "ALAW") == 0) {
+					sleepTime = 4096 * 1000 / 1 / 8000;
+				} else {
+					sleepTime = 4096 * 1000 / 2 / 16000; // 16K が指定されたものとして計算...
+				}
+			} else {
+				sleepTime = 4096 * 1000 / 2 / 16000; // 16K が指定されたものとして計算...
+			}
+		}
+
+		{
+			// HTTP 音声認識サーバイベントリスナの作成
+			Pointer<com::amivoice::hrp::HrpListener> listener = new HrpTester(verbose);
+
+			// HTTP 音声認識サーバの初期化
+			Pointer<com::amivoice::hrp::Hrp> hrp = com::amivoice::hrp::Hrp::construct(implementation);
+			hrp->setListener(listener);
+			hrp->setServerURL(serverURL);
+			hrp->setProxyServerName(proxyServerName);
+			hrp->setConnectTimeout(connectTimeout);
+			hrp->setReceiveTimeout(receiveTimeout);
+			hrp->setGrammarFileNames(grammarFileNames);
+			hrp->setMode(mode);
+			hrp->setProfileId(profileId);
+			hrp->setProfileWords(profileWords);
+			hrp->setSegmenterType(segmenterType);
+			hrp->setSegmenterProperties(segmenterProperties);
+			hrp->setResultUpdatedInterval(resultUpdatedInterval);
+			hrp->setExtension(extension);
+			hrp->setAuthorization(authorization);
+			hrp->setDomainId(domainId);
+			hrp->setCodec(codec);
+			hrp->setResultType(resultType);
+			hrp->setResultEncoding(resultEncoding);
+			hrp->setServiceAuthorization(serviceAuthorization);
+			hrp->setVoiceDetection(voiceDetection);
+
+			// HTTP 音声認識サーバへの接続
+			if (!hrp->connect()) {
+				if (!verbose) {
+					print("%s", hrp->getLastMessage());
+				}
+				print("HTTP 音声認識サーバ %s への接続に失敗しました。", serverURL);
+				return;
+			}
+
+			// <!--
+			if (verbose) {
+				print();
+				print("======================= %s", com::amivoice::hrp::Hrp::getVersion());
+			}
+			// -->
+			for (int i = 0; i < loop; i++) {
+				for (int j = 0; j < audioFileNames.size(); j++) {
+					const String* audioFileName = audioFileNames[j];
+					// <!--
+					if (verbose) {
+						print();
+						if (loop > 1) {
+							print("----------------------- [%d] %s", i + 1, audioFileName->to());
+						} else {
+							print("----------------------- %s", audioFileName->to());
+						}
+						print();
+					}
+					// -->
+
+					// <!-- HTTP リクエストヘッダ群
+					if (acceptTopic != NULL) {
+						hrp->setAcceptTopic(acceptTopic);
+					}
+					if (contentType != NULL) {
+						if (strcmp(contentType, "*") == 0) {
+							if (audioFileName->endsWith(".a08")) {
+								if (audioFileName->indexOf("msb") != -1) {
+									hrp->setContentType("audio/x-pcm;rate=8000;bit=16;byte-order=big-endian");
+								} else {
+									hrp->setContentType("audio/x-pcm;rate=8000;bit=16;byte-order=little-endian");
+								}
+							} else
+							if (audioFileName->endsWith(".a16") || audioFileName->endsWith(".adc")) {
+								if (audioFileName->indexOf("msb") != -1) {
+									hrp->setContentType("audio/x-pcm;rate=16000;bit=16;byte-order=big-endian");
+								} else {
+									hrp->setContentType("audio/x-pcm;rate=16000;bit=16;byte-order=little-endian");
+								}
+							} else
+							if (audioFileName->endsWith(".mu")) {
+								hrp->setContentType("audio/x-mulaw;rate=8000");
+							} else
+							if (audioFileName->endsWith(".alaw")) {
+								hrp->setContentType("audio/x-alaw;rate=8000");
+							}
+						} else {
+							hrp->setContentType(contentType);
+						}
+					}
+					if (accept != NULL) {
+						hrp->setAccept(accept);
+					}
+					// -->
+
+					// 音声データファイルの総バイト数の取得
+					long long audioDataBytes = getFileSize(audioFileName->to());
+					if (audioDataBytes == 0) {
+						print("音声データファイル %s の読み込みに失敗しました。", audioFileName->to());
+						break;
+					}
+
+					// HTTP 音声認識サーバへの音声データの送信の開始
+					if (!hrp->feedDataResume(type, audioDataBytes)) {
+						if (!verbose) {
+							print("%s", hrp->getLastMessage());
+						}
+						print("HTTP 音声認識サーバへの音声データの送信の開始に失敗しました。");
+						break;
+					}
+
+					// 音声データファイルのオープン
+					FILE* audioStream;
+					if (fopen_s(&audioStream, audioFileName->to(), "rb") == 0) {
+						// 音声データファイルからの音声データの読み込み
+						char audioData[4096];
+						int audioDataReadBytes = (int)fread(audioData, 1, 4096, audioStream);
+						while (audioDataReadBytes > 0) {
+							// スリープ時間が計算されているかどうかのチェック
+							if (sleepTime >= 0) {
+								// スリープ時間が計算されている場合...
+								// 微小時間のスリープ
+								hrp->sleep(sleepTime);
+							} else {
+								// スリープ時間が計算されていない場合...
+								// (何もしない)
+							}
+
+							// HTTP 音声認識サーバへの音声データの送信
+							if (!hrp->feedData(audioData, 0, audioDataReadBytes)) {
+								if (!verbose) {
+									print("%s", hrp->getLastMessage());
+								}
+								print("HTTP 音声認識サーバへの音声データの送信に失敗しました。");
+								break;
+							}
+
+							// 音声データファイルからの音声データの読み込み
+							audioDataReadBytes = (int)fread(audioData, 1, 4096, audioStream);
+						}
+
+						// 音声データファイルのクローズ
+						fclose(audioStream);
+					} else {
+						print("音声データファイル %s の読み込みに失敗しました。", audioFileName->to());
+					}
+
+					// HTTP 音声認識サーバへの音声データの送信の完了
+					if (!hrp->feedDataPause()) {
+						if (!verbose) {
+							print("%s", hrp->getLastMessage());
+						}
+						print("HTTP 音声認識サーバへの音声データの送信の完了に失敗しました。");
+						break;
+					}
+				}
+			}
+			// <!--
+			if (verbose) {
+				print();
+				print("=======================");
+				print();
+			}
+			// -->
+
+			// HTTP 音声認識サーバからの切断
+			hrp->disconnect();
+		}
+
+		// 終了時間の取得
+		long long endTime = getNanoTime();
+
+		// 経過時間の表示
+		print("INFO: elapsed time: %.3f [msec.]", (float)(endTime - startTime) / 1000000.0f);
+	}
+
+	private: bool verbose_;
+
+	public: HrpTester(bool verbose) {
+		verbose_ = verbose;
+	}
+
+	public: void resultCreated(const char* sessionId) override {
+		print("C %s", String().fromUTF8(sessionId).to());
+	}
+
+	public: void resultUpdated(const char* result) override {
+		print("U %s", String().fromUTF8(result).to());
+		unsigned short* text = text_(result);
+		if (text != NULL) {
+			print("   -> %s", String().fromUTF16(text).to());
+			delete[] text;
+		}
+	}
+
+	public: void resultFinalized(const char* result) override {
+		print("F %s", String().fromUTF8(result).to());
+		unsigned short* text = text_(result);
+		if (text != NULL) {
+			print("   -> %s", String().fromUTF16(text).to());
+			delete[] text;
+		}
+	}
+
+	public: void TRACE(const char* message) override {
+		if (verbose_) {
+			print("%s", String().fromUTF8(message).to());
+		}
+	}
+
+	private: unsigned short* text_(const char* result) {
+		int index = String(result).lastIndexOf(",\"text\":\"");
+		if (index == -1) {
+			return NULL;
+		}
+		index += 9;
+		int resultLength = String(result).length();
+		unsigned short* buffer = new unsigned short[resultLength - index];
+		int bufferLength = 0;
+		int c = (index >= resultLength) ? 0 : result[index++];
+		while (c != 0) {
+			if (c == '"') {
+				break;
+			}
+			if (c == '\\') {
+				c = (index >= resultLength) ? 0 : result[index++];
+				if (c == 0) {
+					delete[] buffer;
+					return NULL;
+				}
+				if (c == '"' || c == '\\' || c == '/') {
+					buffer[bufferLength++] = (unsigned short)(char)c;
+				} else
+				if (c == 'b' || c == 'f' || c == 'n' || c == 'r' || c == 't') {
+				} else
+				if (c == 'u') {
+					int c0 = (index >= resultLength) ? 0 : result[index++];
+					int c1 = (index >= resultLength) ? 0 : result[index++];
+					int c2 = (index >= resultLength) ? 0 : result[index++];
+					int c3 = (index >= resultLength) ? 0 : result[index++];
+					if (c0 >= '0' && c0 <= '9') {c0 -= '0';} else if (c0 >= 'A' && c0 <= 'F') {c0 -= 'A' - 10;} else if (c0 >= 'a' && c0 <= 'f') {c0 -= 'a' - 10;} else {c0 = -1;}
+					if (c1 >= '0' && c1 <= '9') {c1 -= '0';} else if (c1 >= 'A' && c1 <= 'F') {c1 -= 'A' - 10;} else if (c1 >= 'a' && c1 <= 'f') {c1 -= 'a' - 10;} else {c1 = -1;}
+					if (c2 >= '0' && c2 <= '9') {c2 -= '0';} else if (c2 >= 'A' && c2 <= 'F') {c2 -= 'A' - 10;} else if (c2 >= 'a' && c2 <= 'f') {c2 -= 'a' - 10;} else {c2 = -1;}
+					if (c3 >= '0' && c3 <= '9') {c3 -= '0';} else if (c3 >= 'A' && c3 <= 'F') {c3 -= 'A' - 10;} else if (c3 >= 'a' && c3 <= 'f') {c3 -= 'a' - 10;} else {c3 = -1;}
+					if (c0 == -1 || c1 == -1 || c2 == -1 || c3 == -1) {
+						delete[] buffer;
+						return NULL;
+					}
+					buffer[bufferLength++] = (unsigned short)((c0 << 12) | (c1 << 8) | (c2 << 4) | c3);
+				} else {
+					delete[] buffer;
+					return NULL;
+				}
+			} else {
+				buffer[bufferLength++] = (unsigned short)(char)c;
+			}
+			c = (index >= resultLength) ? 0 : result[index++];
+		}
+		buffer[bufferLength++] = 0;
+		return buffer;
+	}
+};
+
+int main(int argc, char* argv[]) {
+#if defined(_WIN32)
+	_CrtSetDbgFlag(_CrtSetDbgFlag(_CRTDBG_REPORT_FLAG) | _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+#endif
+	StringList args;
+	for (int i = 1; i < argc; i++) {
+		args.add(argv[i]);
+	}
+	HrpTester::main(args);
+	return 0;
+}
