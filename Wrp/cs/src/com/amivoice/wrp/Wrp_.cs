@@ -335,6 +335,8 @@ class Wrp_ : Wrp {
 			onClose_();
 		} catch (IOException e) {
 			onError_(e);
+		} catch (ObjectDisposedException e) {
+			onError_(e);
 		}
 	}
 
