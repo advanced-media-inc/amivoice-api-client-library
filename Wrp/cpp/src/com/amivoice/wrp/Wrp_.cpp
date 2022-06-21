@@ -258,7 +258,9 @@ void Wrp_::disconnect_() /* override */ {
 		out_ = NULL;
 	}
 	if (socket_.impl()->initialized()) {
-		socket_.shutdown();
+		try {
+			socket_.shutdown();
+		} catch (Poco::Exception& e) {}
 	}
 	if (thread_ != NULL) {
 		thread_->join();
@@ -308,10 +310,10 @@ void Wrp_::sendRequest_(const char* data, int dataOffset, int dataBytes, char co
 		outData_[outDataBytes++] = (char)((realDataBytes      ) & 0xFF);
 	} else {
 		outData_[outDataBytes++] = (char)127;
-		outData_[outDataBytes++] = (char)((realDataBytes >> 56) & 0xFF);
-		outData_[outDataBytes++] = (char)((realDataBytes >> 48) & 0xFF);
-		outData_[outDataBytes++] = (char)((realDataBytes >> 40) & 0xFF);
-		outData_[outDataBytes++] = (char)((realDataBytes >> 32) & 0xFF);
+		outData_[outDataBytes++] = 0;
+		outData_[outDataBytes++] = 0;
+		outData_[outDataBytes++] = 0;
+		outData_[outDataBytes++] = 0;
 		outData_[outDataBytes++] = (char)((realDataBytes >> 24) & 0xFF);
 		outData_[outDataBytes++] = (char)((realDataBytes >> 16) & 0xFF);
 		outData_[outDataBytes++] = (char)((realDataBytes >>  8) & 0xFF);
@@ -335,8 +337,10 @@ void Wrp_::run() /* override */ {
 			onMessage_(result__);
 		}
 		onClose_();
+	} catch (Poco::TimeoutException& e) {
+		onError_(e.name());
 	} catch (Poco::IOException& e) {
-		onError_(e.message());
+		onError_(e.name());
 	}
 }
 
@@ -393,18 +397,20 @@ bool Wrp_::receiveResponse_() {
 		if (!read_(8)) {
 			throw Poco::IOException("Unexpected end of stream");
 		}
-		inDataBytes = ((inData_[0] & 0xFF) << 56)
-					| ((inData_[1] & 0xFF) << 48)
-					| ((inData_[2] & 0xFF) << 40)
-					| ((inData_[3] & 0xFF) << 32)
-					| ((inData_[4] & 0xFF) << 24)
+		if (inData_[0] != 0
+		 || inData_[1] != 0
+		 || inData_[2] != 0
+		 || inData_[3] != 0 || (inData_[4] & 0x80) != 0) {
+			throw Poco::IOException("Invalid payload length: " + std::to_string(inDataBytes));
+		}
+		inDataBytes = ((inData_[4] & 0xFF) << 24)
 					| ((inData_[5] & 0xFF) << 16)
 					| ((inData_[6] & 0xFF) <<  8)
 					| ((inData_[7] & 0xFF)      );
 		shift_(8);
 	}
 	if (inDataBytes < 0) {
-		throw Poco::IOException("Invalid payload length: " + inDataBytes);
+		throw Poco::IOException("Invalid payload length: " + std::to_string(inDataBytes));
 	}
 	if (!read_(inDataBytes)) {
 		throw Poco::IOException("Unexpected end of stream");

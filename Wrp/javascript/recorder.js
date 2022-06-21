@@ -17,7 +17,7 @@ var Recorder = function() {
 	// public オブジェクト
 	var recorder_ = {
 		// public プロパティ
-		version: "Recorder/1.0.02",
+		version: "Recorder/1.0.04",
 		downSampling: false,
 		downSamplingElement: undefined,
 		maxRecordingTime: 60000,
@@ -85,9 +85,7 @@ var Recorder = function() {
 	//  ┌────┐                                                    │
 	//  │4       │                                                    │
 	//  └┬───┘                                                    │
-	//    │audioStream.oninactive                                      │
-	//    │                                                            │
-	//    │pauseStarted                                                │
+	//    │pauseEnded                                                  │
 	//    └──────────────────────────────┘
 	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	var state_ = -1;

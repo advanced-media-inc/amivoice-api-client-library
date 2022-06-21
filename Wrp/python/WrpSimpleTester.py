@@ -50,6 +50,9 @@ class WrpSimpleTester(com.amivoice.wrp.WrpListener):
 					# 音声データファイルからの音声データの読み込み
 					audioData = audioStream.read(4096)
 					while len(audioData) > 0:
+						# 微小時間のスリープ
+						wrp.sleep(1)
+
 						# 認識結果情報待機数が 1 以下になるまでスリープ
 						maxSleepTime = 50000
 						while wrp.getWaitingResults() > 1 and maxSleepTime > 0:
@@ -101,6 +104,10 @@ class WrpSimpleTester(com.amivoice.wrp.WrpListener):
 		text = self.text_(result)
 		if text != None:
 			print(" -> %s" % text)
+
+	def eventNotified(self, eventId, eventMessage):
+#		print(eventId + " " + eventMessage)
+		pass
 
 	def TRACE(self, message):
 		pass

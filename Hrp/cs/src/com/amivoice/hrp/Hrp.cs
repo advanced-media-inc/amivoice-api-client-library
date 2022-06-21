@@ -6,18 +6,20 @@ using System.Text;
 using System.Threading;
 using System.Web;
 
+#if !UNITY_2018_4_OR_NEWER
 [assembly: AssemblyTitle("Hrp")]
 [assembly: AssemblyProduct("Hrp")]
-[assembly: AssemblyCopyright("Copyright (C) 2019 Advanced Media, Inc.")]
+[assembly: AssemblyCopyright("Copyright (C) 2019-2021 Advanced Media, Inc.")]
 [assembly: ComVisible(false)]
 [assembly: Guid("d605a501-80ec-4f48-a8fb-2a70e627a257")]
-[assembly: AssemblyVersion("1.0.01.0")]
-[assembly: AssemblyFileVersion("1.0.01.0")]
+[assembly: AssemblyVersion("1.0.03")]
+[assembly: AssemblyFileVersion("1.0.03")]
+#endif
 
 namespace com.amivoice.hrp {
 
 public abstract class Hrp {
-	private static string VERSION = "Hrp/1.0.01 CLR/" + System.Environment.Version.ToString() + " (" + System.Environment.OSVersion.ToString() + ")";
+	private static string VERSION = "Hrp/1.0.03 CLR/" + System.Environment.Version.ToString() + " (" + System.Environment.OSVersion.ToString() + ")";
 
 	public static string getVersion() {
 		return VERSION;
@@ -41,11 +43,10 @@ public abstract class Hrp {
 	private int connectTimeout_;
 	private int receiveTimeout_;
 	private string grammarFileNames_;
-	private string mode_;
 	private string profileId_;
 	private string profileWords_;
-	private string segmenterType_;
 	private string segmenterProperties_;
+	private string keepFillerToken_;
 	private string resultUpdatedInterval_;
 	private string extension_;
 	private string authorization_;
@@ -68,11 +69,10 @@ public abstract class Hrp {
 		connectTimeout_ = 0;
 		receiveTimeout_ = 0;
 		grammarFileNames_ = null;
-		mode_ = null;
 		profileId_ = null;
 		profileWords_ = null;
-		segmenterType_ = null;
 		segmenterProperties_ = null;
+		keepFillerToken_ = null;
 		resultUpdatedInterval_ = null;
 		extension_ = null;
 		authorization_ = null;
@@ -112,10 +112,6 @@ public abstract class Hrp {
 		grammarFileNames_ = grammarFileNames;
 	}
 
-	public void setMode(string mode) {
-		mode_ = mode;
-	}
-
 	public void setProfileId(string profileId) {
 		profileId_ = profileId;
 	}
@@ -124,12 +120,12 @@ public abstract class Hrp {
 		profileWords_ = profileWords;
 	}
 
-	public void setSegmenterType(string segmenterType) {
-		segmenterType_ = segmenterType;
-	}
-
 	public void setSegmenterProperties(string segmenterProperties) {
 		segmenterProperties_ = segmenterProperties;
+	}
+
+	public void setKeepFillerToken(string keepFillerToken) {
+		keepFillerToken_ = keepFillerToken;
 	}
 
 	public void setResultUpdatedInterval(string resultUpdatedInterval) {
@@ -308,13 +304,6 @@ public abstract class Hrp {
 					domainId.Append("grammarFileNames=");
 					domainId.Append(HttpUtility.UrlEncode(grammarFileNames_, Encoding.UTF8).Replace("+", "%20"));
 				}
-				if (mode_ != null) {
-					if (domainId.Length > 0) {
-						domainId.Append(' ');
-					}
-					domainId.Append("mode=");
-					domainId.Append(HttpUtility.UrlEncode(mode_, Encoding.UTF8).Replace("+", "%20"));
-				}
 				if (profileId_ != null) {
 					if (domainId.Length > 0) {
 						domainId.Append(' ');
@@ -329,19 +318,19 @@ public abstract class Hrp {
 					domainId.Append("profileWords=");
 					domainId.Append(HttpUtility.UrlEncode(profileWords_, Encoding.UTF8).Replace("+", "%20"));
 				}
-				if (segmenterType_ != null) {
-					if (domainId.Length > 0) {
-						domainId.Append(' ');
-					}
-					domainId.Append("segmenterType=");
-					domainId.Append(HttpUtility.UrlEncode(segmenterType_, Encoding.UTF8).Replace("+", "%20"));
-				}
 				if (segmenterProperties_ != null) {
 					if (domainId.Length > 0) {
 						domainId.Append(' ');
 					}
 					domainId.Append("segmenterProperties=");
 					domainId.Append(HttpUtility.UrlEncode(segmenterProperties_, Encoding.UTF8).Replace("+", "%20"));
+				}
+				if (keepFillerToken_ != null) {
+					if (domainId.Length > 0) {
+						domainId.Append(' ');
+					}
+					domainId.Append("keepFillerToken=");
+					domainId.Append(HttpUtility.UrlEncode(keepFillerToken_, Encoding.UTF8).Replace("+", "%20"));
 				}
 				if (resultUpdatedInterval_ != null) {
 					if (domainId.Length > 0) {

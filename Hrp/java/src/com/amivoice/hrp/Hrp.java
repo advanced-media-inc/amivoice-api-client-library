@@ -4,7 +4,7 @@ import java.io.*;
 import java.net.URLEncoder;
 
 public abstract class Hrp {
-	private static final String VERSION = "Hrp/1.0.01 Java/" + System.getProperty("java.version") + " (" + System.getProperty("os.name") + " " + System.getProperty("os.version") + ")";
+	private static final String VERSION = "Hrp/1.0.03 Java/" + System.getProperty("java.version") + " (" + System.getProperty("os.name") + " " + System.getProperty("os.version") + ")";
 
 	public static String getVersion() {
 		return VERSION;
@@ -35,11 +35,10 @@ public abstract class Hrp {
 	private int connectTimeout_;
 	private int receiveTimeout_;
 	private String grammarFileNames_;
-	private String mode_;
 	private String profileId_;
 	private String profileWords_;
-	private String segmenterType_;
 	private String segmenterProperties_;
+	private String keepFillerToken_;
 	private String resultUpdatedInterval_;
 	private String extension_;
 	private String authorization_;
@@ -62,11 +61,10 @@ public abstract class Hrp {
 		connectTimeout_ = 0;
 		receiveTimeout_ = 0;
 		grammarFileNames_ = null;
-		mode_ = null;
 		profileId_ = null;
 		profileWords_ = null;
-		segmenterType_ = null;
 		segmenterProperties_ = null;
+		keepFillerToken_ = null;
 		resultUpdatedInterval_ = null;
 		extension_ = null;
 		authorization_ = null;
@@ -106,10 +104,6 @@ public abstract class Hrp {
 		grammarFileNames_ = grammarFileNames;
 	}
 
-	public void setMode(String mode) {
-		mode_ = mode;
-	}
-
 	public void setProfileId(String profileId) {
 		profileId_ = profileId;
 	}
@@ -118,12 +112,12 @@ public abstract class Hrp {
 		profileWords_ = profileWords;
 	}
 
-	public void setSegmenterType(String segmenterType) {
-		segmenterType_ = segmenterType;
-	}
-
 	public void setSegmenterProperties(String segmenterProperties) {
 		segmenterProperties_ = segmenterProperties;
+	}
+
+	public void setKeepFillerToken(String keepFillerToken) {
+		keepFillerToken_ = keepFillerToken;
 	}
 
 	public void setResultUpdatedInterval(String resultUpdatedInterval) {
@@ -304,15 +298,6 @@ public abstract class Hrp {
 						domainId.append(URLEncoder.encode(grammarFileNames_, "UTF-8").replace("+", "%20"));
 					} catch (UnsupportedEncodingException e) {}
 				}
-				if (mode_ != null) {
-					if (domainId.length() > 0) {
-						domainId.append(' ');
-					}
-					domainId.append("mode=");
-					try {
-						domainId.append(URLEncoder.encode(mode_, "UTF-8").replace("+", "%20"));
-					} catch (UnsupportedEncodingException e) {}
-				}
 				if (profileId_ != null) {
 					if (domainId.length() > 0) {
 						domainId.append(' ');
@@ -331,15 +316,6 @@ public abstract class Hrp {
 						domainId.append(URLEncoder.encode(profileWords_, "UTF-8").replace("+", "%20"));
 					} catch (UnsupportedEncodingException e) {}
 				}
-				if (segmenterType_ != null) {
-					if (domainId.length() > 0) {
-						domainId.append(' ');
-					}
-					domainId.append("segmenterType=");
-					try {
-						domainId.append(URLEncoder.encode(segmenterType_, "UTF-8").replace("+", "%20"));
-					} catch (UnsupportedEncodingException e) {}
-				}
 				if (segmenterProperties_ != null) {
 					if (domainId.length() > 0) {
 						domainId.append(' ');
@@ -347,6 +323,15 @@ public abstract class Hrp {
 					domainId.append("segmenterProperties=");
 					try {
 						domainId.append(URLEncoder.encode(segmenterProperties_, "UTF-8").replace("+", "%20"));
+					} catch (UnsupportedEncodingException e) {}
+				}
+				if (keepFillerToken_ != null) {
+					if (domainId.length() > 0) {
+						domainId.append(' ');
+					}
+					domainId.append("keepFillerToken=");
+					try {
+						domainId.append(URLEncoder.encode(keepFillerToken_, "UTF-8").replace("+", "%20"));
 					} catch (UnsupportedEncodingException e) {}
 				}
 				if (resultUpdatedInterval_ != null) {

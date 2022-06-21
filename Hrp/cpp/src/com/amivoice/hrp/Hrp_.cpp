@@ -1,7 +1,9 @@
+#include <cctype>
 #include <string>
 #include "Poco/Base64Encoder.h"
 #include "Poco/Exception.h"
 #include "Poco/NumberFormatter.h"
+#include "Poco/String.h"
 #include "Poco/SynchronizedObject.h"
 #include "Poco/Thread.h"
 #include "Poco/Timespan.h"
@@ -191,7 +193,9 @@ void Hrp_::disconnect_() /* override */ {
 		out_ = NULL;
 	}
 	if (socket_.impl()->initialized()) {
-		socket_.shutdown();
+		try {
+			socket_.shutdown();
+		} catch (Poco::Exception& e) {}
 	}
 	if (thread_ != NULL) {
 		thread_->join();
@@ -419,8 +423,10 @@ void Hrp_::run() /* override */ {
 			}
 			onClose_();
 		}
+	} catch (Poco::TimeoutException& e) {
+		onError_(e.name());
 	} catch (Poco::IOException& e) {
-		onError_(e.message());
+		onError_(e.name());
 	}
 }
 
@@ -470,10 +476,7 @@ std::string Hrp_::receiveResponseHeader_() {
 			std::string::size_type index3 = responseHeader.find("; charset=", index1);
 			if (index3 != std::string::npos && index3 < index2) {
 				index3 += 10;
-				inDataEncoding__ = responseHeader.substr(index3, index2 - index3);
-				for (int i = 0; i < inDataEncoding__.length(); i++) {
-					inDataEncoding__[i] = std::toupper(inDataEncoding__[i]);
-				}
+				inDataEncoding__ = Poco::toUpper(responseHeader.substr(index3, index2 - index3));
 				if (inDataEncoding__ == "SHIFT_JIS") {
 					inDataEncoding__ = "MS932";
 				}

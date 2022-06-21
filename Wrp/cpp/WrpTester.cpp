@@ -433,16 +433,14 @@ class WrpTester : private com::amivoice::wrp::WrpListener {
 		StringList audioFileNames;
 		// グラマファイル名
 		const char* grammarFileNames = NULL;
-		// モード
-		const char* mode = NULL;
 		// プロファイル ID
 		const char* profileId = NULL;
 		// プロファイル登録単語
 		const char* profileWords = NULL;
-		// セグメンタタイプ
-		const char* segmenterType = NULL;
 		// セグメンタプロパティ
 		const char* segmenterProperties = NULL;
+		// フィラー単語を保持するかどうか
+		const char* keepFillerToken = NULL;
 		// 認識中イベント発行間隔
 		const char* resultUpdatedInterval = NULL;
 		// 拡張情報
@@ -455,8 +453,6 @@ class WrpTester : private com::amivoice::wrp::WrpListener {
 		const char* resultType = NULL;
 		// サービス認証キー文字列
 		const char* serviceAuthorization = NULL;
-		// 発話区間検出パラメータ文字列
-		const char* voiceDetection = NULL;
 		// 接続タイムアウト
 		int connectTimeout = 5000;
 		// 受信タイムアウト
@@ -476,20 +472,17 @@ class WrpTester : private com::amivoice::wrp::WrpListener {
 			if (arg->startsWith("g=")) {
 				grammarFileNames = arg->toUTF8() + 2;
 			} else
-			if (arg->startsWith("m=")) {
-				mode = arg->toUTF8() + 2;
-			} else
 			if (arg->startsWith("i=")) {
 				profileId = arg->toUTF8() + 2;
 			} else
 			if (arg->startsWith("w=")) {
 				profileWords = arg->toUTF8() + 2;
 			} else
-			if (arg->startsWith("ot=")) {
-				segmenterType = arg->toUTF8() + 3;
-			} else
 			if (arg->startsWith("op=")) {
 				segmenterProperties = arg->toUTF8() + 3;
+			} else
+			if (arg->startsWith("of=")) {
+				keepFillerToken = arg->toUTF8() + 3;
 			} else
 			if (arg->startsWith("oi=")) {
 				resultUpdatedInterval = arg->toUTF8() + 3;
@@ -508,9 +501,6 @@ class WrpTester : private com::amivoice::wrp::WrpListener {
 			} else
 			if (arg->startsWith("u=")) {
 				serviceAuthorization = arg->toUTF8() + 2;
-			} else
-			if (arg->startsWith("v=")) {
-				voiceDetection = arg->toUTF8() + 2;
 			} else
 			if (arg->startsWith("-x")) {
 				proxyServerName = arg->toUTF8() + 2;
@@ -545,6 +535,9 @@ class WrpTester : private com::amivoice::wrp::WrpListener {
 			} else {
 				audioFileNames.add(arg);
 			}
+			if (verbose) {
+				print("DEBUG: %s", arg->to());
+			}
 		}
 		if (audioFileNames.size() == 0) {
 			print("Usage: WrpTester [<parameters/options>]");
@@ -552,18 +545,16 @@ class WrpTester : private com::amivoice::wrp::WrpListener {
 			print("                   <audioFileName>...");
 			print("Parameters:");
 			print("  g=<grammarFileNames>");
-			print("  m=<mode>");
 			print("  i=<profileId>");
 			print("  w=<profileWords>");
-			print("  ot=<segmenterType>");
 			print("  op=<segmenterProperties>");
+			print("  of=<keepFillerToken>");
 			print("  oi=<resultUpdatedInterval>");
 			print("  oe=<extension>");
 			print("  ou=<authorization>");
 			print("  c=<codec>");
 			print("  r=<resultType>");
 			print("  u=<serviceAuthorization>");
-			print("  v=<voiceDetection>");
 			print("Options:");
 			print("  -x<proxyServerName>         (default: -x)");
 			print("  -c<connectionTimeout>       (default: -c5000)");
@@ -614,18 +605,16 @@ class WrpTester : private com::amivoice::wrp::WrpListener {
 			wrp->setConnectTimeout(connectTimeout);
 			wrp->setReceiveTimeout(receiveTimeout);
 			wrp->setGrammarFileNames(grammarFileNames);
-			wrp->setMode(mode);
 			wrp->setProfileId(profileId);
 			wrp->setProfileWords(profileWords);
-			wrp->setSegmenterType(segmenterType);
 			wrp->setSegmenterProperties(segmenterProperties);
+			wrp->setKeepFillerToken(keepFillerToken);
 			wrp->setResultUpdatedInterval(resultUpdatedInterval);
 			wrp->setExtension(extension);
 			wrp->setAuthorization(authorization);
 			wrp->setCodec(codec);
 			wrp->setResultType(resultType);
 			wrp->setServiceAuthorization(serviceAuthorization);
-			wrp->setVoiceDetection(voiceDetection);
 
 			// WebSocket 音声認識サーバへの接続
 			if (!wrp->connect()) {
@@ -680,6 +669,9 @@ class WrpTester : private com::amivoice::wrp::WrpListener {
 								wrp->sleep(sleepTime);
 							} else {
 								// スリープ時間が計算されていない場合...
+								// 微小時間のスリープ
+								wrp->sleep(1);
+
 								// 認識結果情報待機数が 1 以下になるまでスリープ
 								int maxSleepTime = 50000;
 								while (wrp->getWaitingResults() > 1 && maxSleepTime > 0) {
@@ -770,6 +762,10 @@ class WrpTester : private com::amivoice::wrp::WrpListener {
 			print("   -> %s", String().fromUTF16(text).to());
 			delete[] text;
 		}
+	}
+
+	public: void eventNotified(int eventId, const char* eventMessage) override {
+		print("%c %s", (char)eventId, String().fromUTF8(eventMessage).to());
 	}
 
 	public: void TRACE(const char* message) override {

@@ -263,13 +263,13 @@ class Wrp_(Wrp):
 		else:
 			self.outData_[outDataBytes] = 127
 			outDataBytes += 1
-			self.outData_[outDataBytes] = ((realDataBytes >> 56) & 0xFF)
+			self.outData_[outDataBytes] = 0
 			outDataBytes += 1
-			self.outData_[outDataBytes] = ((realDataBytes >> 48) & 0xFF)
+			self.outData_[outDataBytes] = 0
 			outDataBytes += 1
-			self.outData_[outDataBytes] = ((realDataBytes >> 40) & 0xFF)
+			self.outData_[outDataBytes] = 0
 			outDataBytes += 1
-			self.outData_[outDataBytes] = ((realDataBytes >> 32) & 0xFF)
+			self.outData_[outDataBytes] = 0
 			outDataBytes += 1
 			self.outData_[outDataBytes] = ((realDataBytes >> 24) & 0xFF)
 			outDataBytes += 1
@@ -331,11 +331,12 @@ class Wrp_(Wrp):
 		elif inDataBytes == 127:
 			if not self.read_(8):
 				raise IOError("Unexpected end of stream")
-			inDataBytes = ((self.inData_[0] & 0xFF) << 56) \
-						| ((self.inData_[1] & 0xFF) << 48) \
-						| ((self.inData_[2] & 0xFF) << 40) \
-						| ((self.inData_[3] & 0xFF) << 32) \
-						| ((self.inData_[4] & 0xFF) << 24) \
+			if self.inData_[0] != 0 \
+			or self.inData_[1] != 0 \
+			or self.inData_[2] != 0 \
+			or self.inData_[3] != 0 or (self.inData_[4] & 0x80) != 0:
+				raise IOError("Invalid payload length: " + str(inDataBytes))
+			inDataBytes = ((self.inData_[4] & 0xFF) << 24) \
 						| ((self.inData_[5] & 0xFF) << 16) \
 						| ((self.inData_[6] & 0xFF) <<  8) \
 						| ((self.inData_[7] & 0xFF)      )

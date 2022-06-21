@@ -11,16 +11,14 @@ public class WrpTester implements com.amivoice.wrp.WrpListener {
 		ArrayList<String> audioFileNames = new ArrayList<String>();
 		// グラマファイル名
 		String grammarFileNames = null;
-		// モード
-		String mode = null;
 		// プロファイル ID
 		String profileId = null;
 		// プロファイル登録単語
 		String profileWords = null;
-		// セグメンタタイプ
-		String segmenterType = null;
 		// セグメンタプロパティ
 		String segmenterProperties = null;
+		// フィラー単語を保持するかどうか
+		String keepFillerToken = null;
 		// 認識中イベント発行間隔
 		String resultUpdatedInterval = null;
 		// 拡張情報
@@ -33,8 +31,6 @@ public class WrpTester implements com.amivoice.wrp.WrpListener {
 		String resultType = null;
 		// サービス認証キー文字列
 		String serviceAuthorization = null;
-		// 発話区間検出パラメータ文字列
-		String voiceDetection = null;
 		// 接続タイムアウト
 		int connectTimeout = 5000;
 		// 受信タイムアウト
@@ -53,20 +49,17 @@ public class WrpTester implements com.amivoice.wrp.WrpListener {
 			if (arg.startsWith("g=")) {
 				grammarFileNames = arg.substring(2);
 			} else
-			if (arg.startsWith("m=")) {
-				mode = arg.substring(2);
-			} else
 			if (arg.startsWith("i=")) {
 				profileId = arg.substring(2);
 			} else
 			if (arg.startsWith("w=")) {
 				profileWords = arg.substring(2);
 			} else
-			if (arg.startsWith("ot=")) {
-				segmenterType = arg.substring(3);
-			} else
 			if (arg.startsWith("op=")) {
 				segmenterProperties = arg.substring(3);
+			} else
+			if (arg.startsWith("of=")) {
+				keepFillerToken = arg.substring(3);
 			} else
 			if (arg.startsWith("oi=")) {
 				resultUpdatedInterval = arg.substring(3);
@@ -85,9 +78,6 @@ public class WrpTester implements com.amivoice.wrp.WrpListener {
 			} else
 			if (arg.startsWith("u=")) {
 				serviceAuthorization = arg.substring(2);
-			} else
-			if (arg.startsWith("v=")) {
-				voiceDetection = arg.substring(2);
 			} else
 			if (arg.startsWith("-x")) {
 				proxyServerName = arg.substring(2);
@@ -122,6 +112,9 @@ public class WrpTester implements com.amivoice.wrp.WrpListener {
 			} else {
 				audioFileNames.add(arg);
 			}
+			if (verbose) {
+				System.out.println("DEBUG: " + arg);
+			}
 		}
 		if (audioFileNames.size() == 0) {
 			System.out.println("Usage: java WrpTester [<parameters/options>]");
@@ -129,18 +122,16 @@ public class WrpTester implements com.amivoice.wrp.WrpListener {
 			System.out.println("                        <audioFileName>...");
 			System.out.println("Parameters:");
 			System.out.println("  g=<grammarFileNames>");
-			System.out.println("  m=<mode>");
 			System.out.println("  i=<profileId>");
 			System.out.println("  w=<profileWords>");
-			System.out.println("  ot=<segmenterType>");
 			System.out.println("  op=<segmenterProperties>");
+			System.out.println("  of=<keepFillerToken>");
 			System.out.println("  oi=<resultUpdatedInterval>");
 			System.out.println("  oe=<extension>");
 			System.out.println("  ou=<authorization>");
 			System.out.println("  c=<codec>");
 			System.out.println("  r=<resultType>");
 			System.out.println("  u=<serviceAuthorization>");
-			System.out.println("  v=<voiceDetection>");
 			System.out.println("Options:");
 			System.out.println("  -x<proxyServerName>         (default: -x)");
 			System.out.println("  -c<connectionTimeout>       (default: -c5000)");
@@ -190,18 +181,16 @@ public class WrpTester implements com.amivoice.wrp.WrpListener {
 		wrp.setConnectTimeout(connectTimeout);
 		wrp.setReceiveTimeout(receiveTimeout);
 		wrp.setGrammarFileNames(grammarFileNames);
-		wrp.setMode(mode);
 		wrp.setProfileId(profileId);
 		wrp.setProfileWords(profileWords);
-		wrp.setSegmenterType(segmenterType);
 		wrp.setSegmenterProperties(segmenterProperties);
+		wrp.setKeepFillerToken(keepFillerToken);
 		wrp.setResultUpdatedInterval(resultUpdatedInterval);
 		wrp.setExtension(extension);
 		wrp.setAuthorization(authorization);
 		wrp.setCodec(codec);
 		wrp.setResultType(resultType);
 		wrp.setServiceAuthorization(serviceAuthorization);
-		wrp.setVoiceDetection(voiceDetection);
 
 		// WebSocket 音声認識サーバへの接続
 		if (!wrp.connect()) {
@@ -254,6 +243,9 @@ public class WrpTester implements com.amivoice.wrp.WrpListener {
 								wrp.sleep(sleepTime);
 							} else {
 								// スリープ時間が計算されていない場合...
+								// 微小時間のスリープ
+								wrp.sleep(1);
+
 								// 認識結果情報待機数が 1 以下になるまでスリープ
 								int maxSleepTime = 50000;
 								while (wrp.getWaitingResults() > 1 && maxSleepTime > 0) {
@@ -344,6 +336,11 @@ public class WrpTester implements com.amivoice.wrp.WrpListener {
 		if (text != null) {
 			System.out.println("   -> " + text);
 		}
+	}
+
+	@Override
+	public void eventNotified(int eventId, String eventMessage) {
+		System.out.println((char)eventId + " " + eventMessage);
 	}
 
 	@Override

@@ -44,6 +44,7 @@ class HRP_API Hrp {
 	private: std::string profileWords_;
 	private: std::string segmenterType_;
 	private: std::string segmenterProperties_;
+	private: std::string keepFillerToken_;
 	private: std::string resultUpdatedInterval_;
 	private: std::string extension_;
 	private: std::string authorization_;
@@ -73,6 +74,7 @@ class HRP_API Hrp {
 	public: void setProfileWords(const char* profileWords);
 	public: void setSegmenterType(const char* segmenterType);
 	public: void setSegmenterProperties(const char* segmenterProperties);
+	public: void setKeepFillerToken(const char* keepFillerToken);
 	public: void setResultUpdatedInterval(const char* resultUpdatedInterval);
 	public: void setExtension(const char* extension);
 	public: void setAuthorization(const char* authorization);

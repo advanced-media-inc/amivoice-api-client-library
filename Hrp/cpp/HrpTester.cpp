@@ -433,16 +433,14 @@ class HrpTester : private com::amivoice::hrp::HrpListener {
 		StringList audioFileNames;
 		// グラマファイル名
 		const char* grammarFileNames = NULL;
-		// モード
-		const char* mode = NULL;
 		// プロファイル ID
 		const char* profileId = NULL;
 		// プロファイル登録単語
 		const char* profileWords = NULL;
-		// セグメンタタイプ
-		const char* segmenterType = NULL;
 		// セグメンタプロパティ
 		const char* segmenterProperties = NULL;
+		// フィラー単語を保持するかどうか
+		const char* keepFillerToken = NULL;
 		// 認識中イベント発行間隔
 		const char* resultUpdatedInterval = NULL;
 		// 拡張情報
@@ -474,7 +472,7 @@ class HrpTester : private com::amivoice::hrp::HrpListener {
 		// 処理ループ (1～)
 		int loop = 1;
 		// スリープ時間
-		int sleepTime = 100;
+		int sleepTime = -2;
 		// 詳細出力
 		bool verbose = false;
 		// 実装タイプ
@@ -486,20 +484,17 @@ class HrpTester : private com::amivoice::hrp::HrpListener {
 			if (arg->startsWith("g=")) {
 				grammarFileNames = arg->toUTF8() + 2;
 			} else
-			if (arg->startsWith("m=")) {
-				mode = arg->toUTF8() + 2;
-			} else
 			if (arg->startsWith("i=")) {
 				profileId = arg->toUTF8() + 2;
 			} else
 			if (arg->startsWith("w=")) {
 				profileWords = arg->toUTF8() + 2;
 			} else
-			if (arg->startsWith("ot=")) {
-				segmenterType = arg->toUTF8() + 3;
-			} else
 			if (arg->startsWith("op=")) {
 				segmenterProperties = arg->toUTF8() + 3;
+			} else
+			if (arg->startsWith("of=")) {
+				keepFillerToken = arg->toUTF8() + 3;
 			} else
 			if (arg->startsWith("oi=")) {
 				resultUpdatedInterval = arg->toUTF8() + 3;
@@ -570,6 +565,9 @@ class HrpTester : private com::amivoice::hrp::HrpListener {
 			} else {
 				audioFileNames.add(arg);
 			}
+			if (verbose) {
+				print("DEBUG: %s", arg->to());
+			}
 		}
 		if (audioFileNames.size() == 0) {
 			print("Usage: HrpTester [<parameters/options>]");
@@ -577,11 +575,10 @@ class HrpTester : private com::amivoice::hrp::HrpListener {
 			print("                   <audioFileName>...");
 			print("Parameters:");
 			print("  g=<grammarFileNames>");
-			print("  m=<mode>");
 			print("  i=<profileId>");
 			print("  w=<profileWords>");
-			print("  ot=<segmenterType>");
 			print("  op=<segmenterProperties>");
+			print("  of=<keepFillerToken>");
 			print("  oi=<resultUpdatedInterval>");
 			print("  oe=<extension>");
 			print("  ou=<authorization>");
@@ -649,11 +646,10 @@ class HrpTester : private com::amivoice::hrp::HrpListener {
 			hrp->setConnectTimeout(connectTimeout);
 			hrp->setReceiveTimeout(receiveTimeout);
 			hrp->setGrammarFileNames(grammarFileNames);
-			hrp->setMode(mode);
 			hrp->setProfileId(profileId);
 			hrp->setProfileWords(profileWords);
-			hrp->setSegmenterType(segmenterType);
 			hrp->setSegmenterProperties(segmenterProperties);
+			hrp->setKeepFillerToken(keepFillerToken);
 			hrp->setResultUpdatedInterval(resultUpdatedInterval);
 			hrp->setExtension(extension);
 			hrp->setAuthorization(authorization);
@@ -759,7 +755,8 @@ class HrpTester : private com::amivoice::hrp::HrpListener {
 								hrp->sleep(sleepTime);
 							} else {
 								// スリープ時間が計算されていない場合...
-								// (何もしない)
+								// 微小時間のスリープ
+								hrp->sleep(1);
 							}
 
 							// HTTP 音声認識サーバへの音声データの送信

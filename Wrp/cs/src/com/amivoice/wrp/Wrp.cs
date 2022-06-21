@@ -5,18 +5,20 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 
+#if !UNITY_2018_4_OR_NEWER
 [assembly: AssemblyTitle("Wrp")]
 [assembly: AssemblyProduct("Wrp")]
-[assembly: AssemblyCopyright("Copyright (C) 2019 Advanced Media, Inc.")]
+[assembly: AssemblyCopyright("Copyright (C) 2019-2021 Advanced Media, Inc.")]
 [assembly: ComVisible(false)]
 [assembly: Guid("d605a501-80ec-4f48-a8fb-2a70e627a256")]
-[assembly: AssemblyVersion("1.0.01.0")]
-[assembly: AssemblyFileVersion("1.0.01.0")]
+[assembly: AssemblyVersion("1.0.03")]
+[assembly: AssemblyFileVersion("1.0.03")]
+#endif
 
 namespace com.amivoice.wrp {
 
 public abstract class Wrp {
-	private static string VERSION = "Wrp/1.0.01 CLR/" + System.Environment.Version.ToString() + " (" + System.Environment.OSVersion.ToString() + ")";
+	private static string VERSION = "Wrp/1.0.03 CLR/" + System.Environment.Version.ToString() + " (" + System.Environment.OSVersion.ToString() + ")";
 
 	public static string getVersion() {
 		return VERSION;
@@ -40,11 +42,10 @@ public abstract class Wrp {
 	private int connectTimeout_;
 	private int receiveTimeout_;
 	private string grammarFileNames_;
-	private string mode_;
 	private string profileId_;
 	private string profileWords_;
-	private string segmenterType_;
 	private string segmenterProperties_;
+	private string keepFillerToken_;
 	private string resultUpdatedInterval_;
 	private string extension_;
 	private string authorization_;
@@ -61,11 +62,10 @@ public abstract class Wrp {
 		connectTimeout_ = 0;
 		receiveTimeout_ = 0;
 		grammarFileNames_ = null;
-		mode_ = null;
 		profileId_ = null;
 		profileWords_ = null;
-		segmenterType_ = null;
 		segmenterProperties_ = null;
+		keepFillerToken_ = null;
 		resultUpdatedInterval_ = null;
 		extension_ = null;
 		authorization_ = null;
@@ -81,6 +81,14 @@ public abstract class Wrp {
 
 	public void setServerURL(string serverURL) {
 		serverURL_ = serverURL;
+		if (serverURL_ != null) {
+			if (serverURL_.StartsWith("http://")) {
+				serverURL_ = "ws://" + serverURL_.Substring(7);
+			} else
+			if (serverURL_.StartsWith("https://")) {
+				serverURL_ = "wss://" + serverURL_.Substring(8);
+			}
+		}
 	}
 
 	public void setProxyServerName(string proxyServerName) {
@@ -99,10 +107,6 @@ public abstract class Wrp {
 		grammarFileNames_ = grammarFileNames;
 	}
 
-	public void setMode(string mode) {
-		mode_ = mode;
-	}
-
 	public void setProfileId(string profileId) {
 		profileId_ = profileId;
 	}
@@ -111,12 +115,12 @@ public abstract class Wrp {
 		profileWords_ = profileWords;
 	}
 
-	public void setSegmenterType(string segmenterType) {
-		segmenterType_ = segmenterType;
-	}
-
 	public void setSegmenterProperties(string segmenterProperties) {
 		segmenterProperties_ = segmenterProperties;
+	}
+
+	public void setKeepFillerToken(string keepFillerToken) {
+		keepFillerToken_ = keepFillerToken;
 	}
 
 	public void setResultUpdatedInterval(string resultUpdatedInterval) {
@@ -140,18 +144,8 @@ public abstract class Wrp {
 	}
 
 	public void setServiceAuthorization(string serviceAuthorization) {
-		authorization_ = serviceAuthorization;
-	}
-
-	public void setVoiceDetection(string voiceDetection) {
-		if (voiceDetection != null) {
-			segmenterType_ = "G4";
-			segmenterProperties_ = voiceDetection;
-			if (voiceDetection.Length > 3 && voiceDetection[0] == 'G'
-										  && voiceDetection[2] == ' ') {
-				segmenterType_ = voiceDetection.Substring(0, 2);
-				segmenterProperties_ = voiceDetection.Substring(3);
-			}
+		if (serviceAuthorization != null) {
+			authorization_ = serviceAuthorization;
 		}
 	}
 
@@ -247,16 +241,6 @@ public abstract class Wrp {
 			} else {
 				command.Append(" \x01");
 			}
-			if (mode_ != null) {
-				command.Append(" mode=");
-				if (mode_.IndexOf(' ') != -1) {
-					command.Append('"');
-					command.Append(mode_);
-					command.Append('"');
-				} else {
-					command.Append(mode_);
-				}
-			}
 			if (profileId_ != null) {
 				command.Append(" profileId=");
 				if (profileId_.IndexOf(' ') != -1) {
@@ -277,16 +261,6 @@ public abstract class Wrp {
 					command.Append(profileWords_);
 				}
 			}
-			if (segmenterType_ != null) {
-				command.Append(" segmenterType=");
-				if (segmenterType_.IndexOf(' ') != -1) {
-					command.Append('"');
-					command.Append(segmenterType_);
-					command.Append('"');
-				} else {
-					command.Append(segmenterType_);
-				}
-			}
 			if (segmenterProperties_ != null) {
 				command.Append(" segmenterProperties=");
 				if (segmenterProperties_.IndexOf(' ') != -1) {
@@ -295,6 +269,16 @@ public abstract class Wrp {
 					command.Append('"');
 				} else {
 					command.Append(segmenterProperties_);
+				}
+			}
+			if (keepFillerToken_ != null) {
+				command.Append(" keepFillerToken=");
+				if (keepFillerToken_.IndexOf(' ') != -1) {
+					command.Append('"');
+					command.Append(keepFillerToken_);
+					command.Append('"');
+				} else {
+					command.Append(keepFillerToken_);
 				}
 			}
 			if (resultUpdatedInterval_ != null) {
@@ -311,7 +295,7 @@ public abstract class Wrp {
 				command.Append(" extension=");
 				if (extension_.IndexOf(' ') != -1) {
 					command.Append('"');
-					command.Append(extension_);
+					command.Append(extension_.Replace("\"", "\"\""));
 					command.Append('"');
 				} else {
 					command.Append(extension_);
@@ -566,6 +550,16 @@ public abstract class Wrp {
 				listener_.resultFinalized("\x01\x01\x01\x01\x01" + message.Substring(2));
 			}
 			waitingResults_--;
+		} else
+		if (command == 'Q') {
+			if (listener_ != null) {
+				listener_.eventNotified((int)command, message.Substring(2));
+			}
+		} else
+		if (command == 'G') {
+			if (listener_ != null) {
+				listener_.eventNotified((int)command, message.Substring(2));
+			}
 		}
 	}
 }

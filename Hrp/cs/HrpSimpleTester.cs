@@ -5,20 +5,26 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 
+#if !UNITY_2018_4_OR_NEWER
 [assembly: AssemblyTitle("HrpSimpleTester")]
 [assembly: AssemblyProduct("HrpSimpleTester")]
-[assembly: AssemblyCopyright("Copyright (C) 2019 Advanced Media, Inc.")]
+[assembly: AssemblyCopyright("Copyright (C) 2019-2021 Advanced Media, Inc.")]
 [assembly: ComVisible(false)]
 [assembly: Guid("c7841911-a965-4734-9222-462422948eeb")]
-[assembly: AssemblyVersion("1.0.01.0")]
-[assembly: AssemblyFileVersion("1.0.01.0")]
+[assembly: AssemblyVersion("1.0.03")]
+[assembly: AssemblyFileVersion("1.0.03")]
+#endif
 
 namespace HrpSimpleTester {
 
 public class HrpSimpleTester : com.amivoice.hrp.HrpListener {
+	#if UNITY_2018_4_OR_NEWER
+	public static PseudoConsole Console;
+	#endif
+
 	public static void Main(string[] args) {
 		if (args.Length < 4) {
-			Console.WriteLine("Usage: HrpSimpleTester.exe <url> <audioFileName> <codec> <grammarFileNames> [<authorization>]");
+			Console.WriteLine("Usage: HrpSimpleTester <url> <audioFileName> <codec> <grammarFileNames> [<authorization>]");
 			return;
 		}
 
@@ -60,12 +66,8 @@ public class HrpSimpleTester : com.amivoice.hrp.HrpListener {
 					byte[] audioData = new byte[4096];
 					int audioDataReadBytes = audioStream.Read(audioData, 0, audioData.Length);
 					while (audioDataReadBytes > 0) {
-
-						// 認識の途中結果を返すイベントに対応しているサーバーを使用し、
-						// イベントの受信処理が必要な場合は、微小時間のスリープが必要です。
-						// 
 						// 微小時間のスリープ
-						// hrp.sleep(100);
+						hrp.sleep(1);
 
 						// HTTP 音声認識サーバへの音声データの送信
 						if (!hrp.feedData(audioData, 0, audioDataReadBytes)) {

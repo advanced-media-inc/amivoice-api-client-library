@@ -84,6 +84,8 @@ copy bin\$(PlatformString)$(ModuleString)$(ConfigurationString)\$(TargetName).li
     <ClInclude Include="com\amivoice\wrp\Wrp.h"/>
     <ClCompile Include="com\amivoice\wrp\Wrp_.cpp"/>
     <ClInclude Include="com\amivoice\wrp\Wrp_.h"/>
+    <ClCompile Include="com\amivoice\wrp\Wrp__.cpp"/>
+    <ClInclude Include="com\amivoice\wrp\Wrp__.h"/>
     <ClInclude Include="com\amivoice\wrp\WrpListener.h"/>
   </ItemGroup>
 </Project>

@@ -6,6 +6,7 @@ public interface WrpListener {
 	void resultCreated();
 	void resultUpdated(string result);
 	void resultFinalized(string result);
+	void eventNotified(int eventId, string eventMessage);
 	void TRACE(string message);
 }
 

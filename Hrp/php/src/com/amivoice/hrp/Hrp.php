@@ -10,7 +10,7 @@ abstract class Hrp {
 
 	public static function getVersion() {
 		if (self::$VERSION === null) {
-			self::$VERSION = "Hrp/1.0.01 PHP/" . phpversion() . " (" . php_uname('s') . " " . php_uname('r') . " " . php_uname('v') . ")";
+			self::$VERSION = "Hrp/1.0.03 PHP/" . phpversion() . " (" . php_uname('s') . " " . php_uname('r') . " " . php_uname('v') . ")";
 		}
 		return self::$VERSION;
 	}
@@ -29,11 +29,10 @@ abstract class Hrp {
 	private $connectTimeout_;
 	private $receiveTimeout_;
 	private $grammarFileNames_;
-	private $mode_;
 	private $profileId_;
 	private $profileWords_;
-	private $segmenterType_;
 	private $segmenterProperties_;
+	private $keepFillerToken_;
 	private $resultUpdatedInterval_;
 	private $extension_;
 	private $authorization_;
@@ -56,11 +55,10 @@ abstract class Hrp {
 		$this->connectTimeout_ = 0;
 		$this->receiveTimeout_ = 0;
 		$this->grammarFileNames_ = null;
-		$this->mode_ = null;
 		$this->profileId_ = null;
 		$this->profileWords_ = null;
-		$this->segmenterType_ = null;
 		$this->segmenterProperties_ = null;
+		$this->keepFillerToken_ = null;
 		$this->resultUpdatedInterval_ = null;
 		$this->extension_ = null;
 		$this->authorization_ = null;
@@ -100,10 +98,6 @@ abstract class Hrp {
 		$this->grammarFileNames_ = $grammarFileNames;
 	}
 
-	public function setMode($mode) {
-		$this->mode_ = $mode;
-	}
-
 	public function setProfileId($profileId) {
 		$this->profileId_ = $profileId;
 	}
@@ -112,12 +106,12 @@ abstract class Hrp {
 		$this->profileWords_ = $profileWords;
 	}
 
-	public function setSegmenterType($segmenterType) {
-		$this->segmenterType_ = $segmenterType;
-	}
-
 	public function setSegmenterProperties($segmenterProperties) {
 		$this->segmenterProperties_ = $segmenterProperties;
+	}
+
+	public function setKeepFillerToken($keepFillerToken) {
+		$this->keepFillerToken_ = $keepFillerToken;
 	}
 
 	public function setResultUpdatedInterval($resultUpdatedInterval) {
@@ -279,13 +273,6 @@ abstract class Hrp {
 					$domainId .= "grammarFileNames=";
 					$domainId .= rawurlencode($this->grammarFileNames_);
 				}
-				if ($this->mode_ !== null) {
-					if ($domainId !== "") {
-						$domainId .= ' ';
-					}
-					$domainId .= "mode=";
-					$domainId .= rawurlencode($this->mode_);
-				}
 				if ($this->profileId_ !== null) {
 					if ($domainId !== "") {
 						$domainId .= ' ';
@@ -300,19 +287,19 @@ abstract class Hrp {
 					$domainId .= "profileWords=";
 					$domainId .= rawurlencode($this->profileWords_);
 				}
-				if ($this->segmenterType_ !== null) {
-					if ($domainId !== "") {
-						$domainId .= ' ';
-					}
-					$domainId .= "segmenterType=";
-					$domainId .= rawurlencode($this->segmenterType_);
-				}
 				if ($this->segmenterProperties_ !== null) {
 					if ($domainId !== "") {
 						$domainId .= ' ';
 					}
 					$domainId .= "segmenterProperties=";
 					$domainId .= rawurlencode($this->segmenterProperties_);
+				}
+				if ($this->keepFillerToken_ !== null) {
+					if ($domainId !== "") {
+						$domainId .= ' ';
+					}
+					$domainId .= "keepFillerToken=";
+					$domainId .= rawurlencode($this->keepFillerToken_);
 				}
 				if ($this->resultUpdatedInterval_ !== null) {
 					if ($domainId !== "") {

@@ -417,10 +417,10 @@ class Wrp_ extends Wrp implements Runnable {
 			outData_[outDataBytes++] = (byte)((realDataBytes      ) & 0xFF);
 		} else {
 			outData_[outDataBytes++] = (byte)127;
-			outData_[outDataBytes++] = (byte)((realDataBytes >> 56) & 0xFF);
-			outData_[outDataBytes++] = (byte)((realDataBytes >> 48) & 0xFF);
-			outData_[outDataBytes++] = (byte)((realDataBytes >> 40) & 0xFF);
-			outData_[outDataBytes++] = (byte)((realDataBytes >> 32) & 0xFF);
+			outData_[outDataBytes++] = 0;
+			outData_[outDataBytes++] = 0;
+			outData_[outDataBytes++] = 0;
+			outData_[outDataBytes++] = 0;
 			outData_[outDataBytes++] = (byte)((realDataBytes >> 24) & 0xFF);
 			outData_[outDataBytes++] = (byte)((realDataBytes >> 16) & 0xFF);
 			outData_[outDataBytes++] = (byte)((realDataBytes >>  8) & 0xFF);
@@ -489,11 +489,13 @@ class Wrp_ extends Wrp implements Runnable {
 			if (!read_(8)) {
 				throw new IOException("Unexpected end of stream");
 			}
-			inDataBytes = ((inData_[0] & 0xFF) << 56)
-						| ((inData_[1] & 0xFF) << 48)
-						| ((inData_[2] & 0xFF) << 40)
-						| ((inData_[3] & 0xFF) << 32)
-						| ((inData_[4] & 0xFF) << 24)
+			if (inData_[0] != 0
+			 || inData_[1] != 0
+			 || inData_[2] != 0
+			 || inData_[3] != 0 || (inData_[4] & 0x80) != 0) {
+				throw new IOException("Invalid payload length: " + inDataBytes);
+			}
+			inDataBytes = ((inData_[4] & 0xFF) << 24)
 						| ((inData_[5] & 0xFF) << 16)
 						| ((inData_[6] & 0xFF) <<  8)
 						| ((inData_[7] & 0xFF)      );

@@ -37,16 +37,14 @@ class HrpTester implements com\amivoice\hrp\HrpListener {
 		$audioFileNames = [];
 		// グラマファイル名
 		$grammarFileNames = null;
-		// モード
-		$mode = null;
 		// プロファイル ID
 		$profileId = null;
 		// プロファイル登録単語
 		$profileWords = null;
-		// セグメンタタイプ
-		$segmenterType = null;
 		// セグメンタプロパティ
 		$segmenterProperties = null;
+		// フィラー単語を保持するかどうか
+		$keepFillerToken = null;
 		// 認識中イベント発行間隔
 		$resultUpdatedInterval = null;
 		// 拡張情報
@@ -78,7 +76,7 @@ class HrpTester implements com\amivoice\hrp\HrpListener {
 		// 処理ループ (1～)
 		$loop = 1;
 		// スリープ時間
-		$sleepTime = 100;
+		$sleepTime = -2;
 		// 詳細出力
 		$verbose = false;
 		// 実装タイプ
@@ -89,20 +87,17 @@ class HrpTester implements com\amivoice\hrp\HrpListener {
 			if (strlen($arg) >= 2 && substr_compare($arg, "g=", 0, 2) === 0) {
 				$grammarFileNames = substr($arg, 2);
 			} else
-			if (strlen($arg) >= 2 && substr_compare($arg, "m=", 0, 2) === 0) {
-				$mode = substr($arg, 2);
-			} else
 			if (strlen($arg) >= 2 && substr_compare($arg, "i=", 0, 2) === 0) {
 				$profileId = substr($arg, 2);
 			} else
 			if (strlen($arg) >= 2 && substr_compare($arg, "w=", 0, 2) === 0) {
 				$profileWords = substr($arg, 2);
 			} else
-			if (strlen($arg) >= 3 && substr_compare($arg, "ot=", 0, 3) === 0) {
-				$segmenterType = substr($arg, 3);
-			} else
 			if (strlen($arg) >= 3 && substr_compare($arg, "op=", 0, 3) === 0) {
 				$segmenterProperties = substr($arg, 3);
+			} else
+			if (strlen($arg) >= 3 && substr_compare($arg, "of=", 0, 3) === 0) {
+				$keepFillerToken = substr($arg, 3);
 			} else
 			if (strlen($arg) >= 3 && substr_compare($arg, "oi=", 0, 3) === 0) {
 				$resultUpdatedInterval = substr($arg, 3);
@@ -173,6 +168,9 @@ class HrpTester implements com\amivoice\hrp\HrpListener {
 			} else {
 				$audioFileNames[] = $arg;
 			}
+			if ($verbose) {
+				p("DEBUG: " . $arg);
+			}
 		}
 		if (count($audioFileNames) === 0) {
 			p("Usage: php HrpTester.php [<parameters/options>]");
@@ -180,11 +178,10 @@ class HrpTester implements com\amivoice\hrp\HrpListener {
 			p("                           <audioFileName>...");
 			p("Parameters:");
 			p("  g=<grammarFileNames>");
-			p("  m=<mode>");
 			p("  i=<profileId>");
 			p("  w=<profileWords>");
-			p("  ot=<segmenterType>");
 			p("  op=<segmenterProperties>");
+			p("  of=<keepFillerToken>");
 			p("  oi=<resultUpdatedInterval>");
 			p("  oe=<extension>");
 			p("  ou=<authorization>");
@@ -251,11 +248,10 @@ class HrpTester implements com\amivoice\hrp\HrpListener {
 		$hrp->setConnectTimeout($connectTimeout);
 		$hrp->setReceiveTimeout($receiveTimeout);
 		$hrp->setGrammarFileNames($grammarFileNames);
-		$hrp->setMode($mode);
 		$hrp->setProfileId($profileId);
 		$hrp->setProfileWords($profileWords);
-		$hrp->setSegmenterType($segmenterType);
 		$hrp->setSegmenterProperties($segmenterProperties);
+		$hrp->setKeepFillerToken($keepFillerToken);
 		$hrp->setResultUpdatedInterval($resultUpdatedInterval);
 		$hrp->setExtension($extension);
 		$hrp->setAuthorization($authorization);
@@ -365,7 +361,8 @@ class HrpTester implements com\amivoice\hrp\HrpListener {
 								$hrp->sleep($sleepTime);
 							} else {
 								// スリープ時間が計算されていない場合...
-								// (何もしない)
+								// 微小時間のスリープ
+								$hrp->sleep(1);
 							}
 
 							// HTTP 音声認識サーバへの音声データの送信

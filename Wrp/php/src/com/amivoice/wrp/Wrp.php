@@ -10,7 +10,7 @@ abstract class Wrp {
 
 	public static function getVersion() {
 		if (self::$VERSION === null) {
-			self::$VERSION = "Wrp/1.0.01 PHP/" . phpversion() . " (" . php_uname('s') . " " . php_uname('r') . " " . php_uname('v') . ")";
+			self::$VERSION = "Wrp/1.0.03 PHP/" . phpversion() . " (" . php_uname('s') . " " . php_uname('r') . " " . php_uname('v') . ")";
 		}
 		return self::$VERSION;
 	}
@@ -29,11 +29,10 @@ abstract class Wrp {
 	private $connectTimeout_;
 	private $receiveTimeout_;
 	private $grammarFileNames_;
-	private $mode_;
 	private $profileId_;
 	private $profileWords_;
-	private $segmenterType_;
 	private $segmenterProperties_;
+	private $keepFillerToken_;
 	private $resultUpdatedInterval_;
 	private $extension_;
 	private $authorization_;
@@ -50,11 +49,10 @@ abstract class Wrp {
 		$this->connectTimeout_ = 0;
 		$this->receiveTimeout_ = 0;
 		$this->grammarFileNames_ = null;
-		$this->mode_ = null;
 		$this->profileId_ = null;
 		$this->profileWords_ = null;
-		$this->segmenterType_ = null;
 		$this->segmenterProperties_ = null;
+		$this->keepFillerToken_ = null;
 		$this->resultUpdatedInterval_ = null;
 		$this->extension_ = null;
 		$this->authorization_ = null;
@@ -70,6 +68,14 @@ abstract class Wrp {
 
 	public function setServerURL($serverURL) {
 		$this->serverURL_ = $serverURL;
+		if ($this->serverURL_ !== null) {
+			if (strlen($this->serverURL_) >= 7 && substr_compare($this->serverURL_, "http://", 0, 7) === 0) {
+				$this->serverURL_ = "ws://" . substr($this->serverURL_, 7);
+			} else
+			if (strlen($this->serverURL_) >= 8 && substr_compare($this->serverURL_, "https://", 0, 8) === 0) {
+				$this->serverURL_ = "wss://" . substr($this->serverURL_, 8);
+			}
+		}
 	}
 
 	public function setProxyServerName($proxyServerName) {
@@ -88,10 +94,6 @@ abstract class Wrp {
 		$this->grammarFileNames_ = $grammarFileNames;
 	}
 
-	public function setMode($mode) {
-		$this->mode_ = $mode;
-	}
-
 	public function setProfileId($profileId) {
 		$this->profileId_ = $profileId;
 	}
@@ -100,12 +102,12 @@ abstract class Wrp {
 		$this->profileWords_ = $profileWords;
 	}
 
-	public function setSegmenterType($segmenterType) {
-		$this->segmenterType_ = $segmenterType;
-	}
-
 	public function setSegmenterProperties($segmenterProperties) {
 		$this->segmenterProperties_ = $segmenterProperties;
+	}
+
+	public function setKeepFillerToken($keepFillerToken) {
+		$this->keepFillerToken_ = $keepFillerToken;
 	}
 
 	public function setResultUpdatedInterval($resultUpdatedInterval) {
@@ -129,18 +131,8 @@ abstract class Wrp {
 	}
 
 	public function setServiceAuthorization($serviceAuthorization) {
-		$this->authorization_ = $serviceAuthorization;
-	}
-
-	public function setVoiceDetection($voiceDetection) {
-		if ($voiceDetection !== null) {
-			$this->segmenterType_ = "G4";
-			$this->segmenterProperties_ = $voiceDetection;
-			if (strlen($voiceDetection) > 3 && $voiceDetection[0] === 'G'
-											&& $voiceDetection[2] === ' ') {
-				$this->segmenterType_ = substr($voiceDetection, 0, 2);
-				$this->segmenterProperties_ = substr($voiceDetection, 3);
-			}
+		if ($serviceAuthorization !== null) {
+			$this->authorization_ = $serviceAuthorization;
 		}
 	}
 
@@ -236,16 +228,6 @@ abstract class Wrp {
 			} else {
 				$command .= " \001";
 			}
-			if ($this->mode_ !== null) {
-				$command .= " mode=";
-				if (strpos($this->mode_, ' ') !== false) {
-					$command .= '"';
-					$command .= $this->mode_;
-					$command .= '"';
-				} else {
-					$command .= $this->mode_;
-				}
-			}
 			if ($this->profileId_ !== null) {
 				$command .= " profileId=";
 				if (strpos($this->profileId_, ' ') !== false) {
@@ -266,16 +248,6 @@ abstract class Wrp {
 					$command .= $this->profileWords_;
 				}
 			}
-			if ($this->segmenterType_ !== null) {
-				$command .= " segmenterType=";
-				if (strpos($this->segmenterType_, ' ') !== false) {
-					$command .= '"';
-					$command .= $this->segmenterType_;
-					$command .= '"';
-				} else {
-					$command .= $this->segmenterType_;
-				}
-			}
 			if ($this->segmenterProperties_ !== null) {
 				$command .= " segmenterProperties=";
 				if (strpos($this->segmenterProperties_, ' ') !== false) {
@@ -284,6 +256,16 @@ abstract class Wrp {
 					$command .= '"';
 				} else {
 					$command .= $this->segmenterProperties_;
+				}
+			}
+			if ($this->keepFillerToken_ !== null) {
+				$command .= " keepFillerToken=";
+				if (strpos($this->keepFillerToken_, ' ') !== false) {
+					$command .= '"';
+					$command .= $this->keepFillerToken_;
+					$command .= '"';
+				} else {
+					$command .= $this->keepFillerToken_;
 				}
 			}
 			if ($this->resultUpdatedInterval_ !== null) {
@@ -300,7 +282,7 @@ abstract class Wrp {
 				$command .= " extension=";
 				if (strpos($this->extension_, ' ') !== false) {
 					$command .= '"';
-					$command .= $this->extension_;
+					$command .= str_replace("\"", "\"\"", $this->extension_);
 					$command .= '"';
 				} else {
 					$command .= $this->extension_;
@@ -550,6 +532,16 @@ abstract class Wrp {
 				$this->listener_->resultFinalized("\001\001\001\001\001" . substr($message, 2));
 			}
 			$this->waitingResults_--;
+		} else
+		if ($command === 'Q') {
+			if ($this->listener_ !== null) {
+				$this->listener_->eventNotified($command, substr($message, 2));
+			}
+		} else
+		if ($command === 'G') {
+			if ($this->listener_ !== null) {
+				$this->listener_->eventNotified($command, substr($message, 2));
+			}
 		}
 	}
 }

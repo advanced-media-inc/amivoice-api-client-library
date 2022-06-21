@@ -18,7 +18,7 @@ except:
 		return quote(s, "UTF-8")
 
 class Hrp(object):
-	VERSION = "Hrp/1.0.01 Python/%d.%d.%d (%s)" % (sys.version_info[0], sys.version_info[1], sys.version_info[2], sys.platform)
+	VERSION = "Hrp/1.0.03 Python/%d.%d.%d (%s)" % (sys.version_info[0], sys.version_info[1], sys.version_info[2], sys.platform)
 
 	@staticmethod
 	def getVersion():
@@ -45,6 +45,7 @@ class Hrp(object):
 		self.profileWords_ = None
 		self.segmenterType_ = None
 		self.segmenterProperties_ = None
+		self.keepFillerToken_ = None
 		self.resultUpdatedInterval_ = None
 		self.extension_ = None
 		self.authorization_ = None
@@ -91,6 +92,9 @@ class Hrp(object):
 
 	def setSegmenterProperties(self, segmenterProperties):
 		self.segmenterProperties_ = u(segmenterProperties)
+
+	def setKeepFillerToken(self, keepFillerToken):
+		self.keepFillerToken_ = keepFillerToken
 
 	def setResultUpdatedInterval(self, resultUpdatedInterval):
 		self.resultUpdatedInterval_ = u(resultUpdatedInterval)
@@ -259,6 +263,14 @@ class Hrp(object):
 					domainId += "segmenterProperties="
 					try:
 						domainId += q(self.segmenterProperties_)
+					except:
+						pass
+				if self.keepFillerToken_ != None:
+					if len(domainId) > 0:
+						domainId += ' '
+					domainId += "keepFillerToken="
+					try:
+						domainId += q(self.keepFillerToken_)
 					except:
 						pass
 				if self.resultUpdatedInterval_ != None:

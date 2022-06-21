@@ -15,5 +15,8 @@ class WrpListener:
 	def resultFinalized(result):
 		pass
 	#@abstractmethod
+	def eventNotified(eventId, eventMessage):
+		pass
+	#@abstractmethod
 	def TRACE(message):
 		pass

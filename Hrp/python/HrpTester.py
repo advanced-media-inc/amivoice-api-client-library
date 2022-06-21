@@ -20,16 +20,14 @@ class HrpTester(com.amivoice.hrp.HrpListener):
 		audioFileNames = []
 		# グラマファイル名
 		grammarFileNames = None
-		# モード
-		mode = None
 		# プロファイル ID
 		profileId = None
 		# プロファイル登録単語
 		profileWords = None
-		# セグメンタタイプ
-		segmenterType = None
 		# セグメンタプロパティ
 		segmenterProperties = None
+		# フィラー単語を保持するかどうか
+		keepFillerToken = None
 		# 認識中イベント発行間隔
 		resultUpdatedInterval = None
 		# 拡張情報
@@ -61,7 +59,7 @@ class HrpTester(com.amivoice.hrp.HrpListener):
 		# 処理ループ (1～)
 		loop = 1
 		# スリープ時間
-		sleepTime = 100
+		sleepTime = -2
 		# 詳細出力
 		verbose = False
 		# 実装タイプ
@@ -71,16 +69,14 @@ class HrpTester(com.amivoice.hrp.HrpListener):
 		for arg in args:
 			if arg.startswith("g="):
 				grammarFileNames = arg[2:]
-			elif arg.startswith("m="):
-				mode = arg[2:]
 			elif arg.startswith("i="):
 				profileId = arg[2:]
 			elif arg.startswith("w="):
 				profileWords = arg[2:]
-			elif arg.startswith("ot="):
-				segmenterType = arg[3:]
 			elif arg.startswith("op="):
 				segmenterProperties = arg[3:]
+			elif arg.startswith("of="):
+				keepFillerToken = arg[3:]
 			elif arg.startswith("oi="):
 				resultUpdatedInterval = arg[3:]
 			elif arg.startswith("oe="):
@@ -128,17 +124,18 @@ class HrpTester(com.amivoice.hrp.HrpListener):
 				serverURL = arg
 			else:
 				audioFileNames.append(arg)
+			if verbose:
+				print("DEBUG: %s" % arg)
 		if len(audioFileNames) == 0:
 			print("Usage: python HrpTester.py [<parameters/options>]")
 			print("                            <url>")
 			print("                             <audioFileName>...")
 			print("Parameters:")
 			print("  g=<grammarFileNames>")
-			print("  m=<mode>")
 			print("  i=<profileId>")
 			print("  w=<profileWords>")
-			print("  ot=<segmenterType>")
 			print("  op=<segmenterProperties>")
+			print("  of=<keepFillerToken>")
 			print("  oi=<resultUpdatedInterval>")
 			print("  oe=<extension>")
 			print("  ou=<authorization>")
@@ -197,11 +194,10 @@ class HrpTester(com.amivoice.hrp.HrpListener):
 		hrp.setConnectTimeout(connectTimeout)
 		hrp.setReceiveTimeout(receiveTimeout)
 		hrp.setGrammarFileNames(grammarFileNames)
-		hrp.setMode(mode)
 		hrp.setProfileId(profileId)
 		hrp.setProfileWords(profileWords)
-		hrp.setSegmenterType(segmenterType)
 		hrp.setSegmenterProperties(segmenterProperties)
+		hrp.setKeepFillerToken(keepFillerToken)
 		hrp.setResultUpdatedInterval(resultUpdatedInterval)
 		hrp.setExtension(extension)
 		hrp.setAuthorization(authorization)
@@ -288,8 +284,8 @@ class HrpTester(com.amivoice.hrp.HrpListener):
 									hrp.sleep(sleepTime)
 								else:
 									# スリープ時間が計算されていない場合...
-									# (何もしない)
-									pass
+									# 微小時間のスリープ
+									hrp.sleep(1)
 
 								# HTTP 音声認識サーバへの音声データの送信
 								if not hrp.feedData(audioData, 0, len(audioData)):

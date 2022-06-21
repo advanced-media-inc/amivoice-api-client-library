@@ -11,16 +11,14 @@ public class HrpTester implements com.amivoice.hrp.HrpListener {
 		ArrayList<String> audioFileNames = new ArrayList<String>();
 		// グラマファイル名
 		String grammarFileNames = null;
-		// モード
-		String mode = null;
 		// プロファイル ID
 		String profileId = null;
 		// プロファイル登録単語
 		String profileWords = null;
-		// セグメンタタイプ
-		String segmenterType = null;
 		// セグメンタプロパティ
 		String segmenterProperties = null;
+		// フィラー単語を保持するかどうか
+		String keepFillerToken = null;
 		// 認識中イベント発行間隔
 		String resultUpdatedInterval = null;
 		// 拡張情報
@@ -52,7 +50,7 @@ public class HrpTester implements com.amivoice.hrp.HrpListener {
 		// 処理ループ (1～)
 		int loop = 1;
 		// スリープ時間
-		int sleepTime = 100;
+		int sleepTime = -2;
 		// 詳細出力
 		boolean verbose = false;
 		// 実装タイプ
@@ -63,20 +61,17 @@ public class HrpTester implements com.amivoice.hrp.HrpListener {
 			if (arg.startsWith("g=")) {
 				grammarFileNames = arg.substring(2);
 			} else
-			if (arg.startsWith("m=")) {
-				mode = arg.substring(2);
-			} else
 			if (arg.startsWith("i=")) {
 				profileId = arg.substring(2);
 			} else
 			if (arg.startsWith("w=")) {
 				profileWords = arg.substring(2);
 			} else
-			if (arg.startsWith("ot=")) {
-				segmenterType = arg.substring(3);
-			} else
 			if (arg.startsWith("op=")) {
 				segmenterProperties = arg.substring(3);
+			} else
+			if (arg.startsWith("of=")) {
+				keepFillerToken = arg.substring(3);
 			} else
 			if (arg.startsWith("oi=")) {
 				resultUpdatedInterval = arg.substring(3);
@@ -147,6 +142,9 @@ public class HrpTester implements com.amivoice.hrp.HrpListener {
 			} else {
 				audioFileNames.add(arg);
 			}
+			if (verbose) {
+				System.out.println("DEBUG: " + arg);
+			}
 		}
 		if (audioFileNames.size() == 0) {
 			System.out.println("Usage: java HrpTester [<parameters/options>]");
@@ -154,11 +152,10 @@ public class HrpTester implements com.amivoice.hrp.HrpListener {
 			System.out.println("                        <audioFileName>...");
 			System.out.println("Parameters:");
 			System.out.println("  g=<grammarFileNames>");
-			System.out.println("  m=<mode>");
 			System.out.println("  i=<profileId>");
 			System.out.println("  w=<profileWords>");
-			System.out.println("  ot=<segmenterType>");
 			System.out.println("  op=<segmenterProperties>");
+			System.out.println("  of=<keepFillerToken>");
 			System.out.println("  oi=<resultUpdatedInterval>");
 			System.out.println("  oe=<extension>");
 			System.out.println("  ou=<authorization>");
@@ -225,11 +222,10 @@ public class HrpTester implements com.amivoice.hrp.HrpListener {
 		hrp.setConnectTimeout(connectTimeout);
 		hrp.setReceiveTimeout(receiveTimeout);
 		hrp.setGrammarFileNames(grammarFileNames);
-		hrp.setMode(mode);
 		hrp.setProfileId(profileId);
 		hrp.setProfileWords(profileWords);
-		hrp.setSegmenterType(segmenterType);
 		hrp.setSegmenterProperties(segmenterProperties);
+		hrp.setKeepFillerToken(keepFillerToken);
 		hrp.setResultUpdatedInterval(resultUpdatedInterval);
 		hrp.setExtension(extension);
 		hrp.setAuthorization(authorization);
@@ -333,7 +329,8 @@ public class HrpTester implements com.amivoice.hrp.HrpListener {
 								hrp.sleep(sleepTime);
 							} else {
 								// スリープ時間が計算されていない場合...
-								// (何もしない)
+								// 微小時間のスリープ
+								hrp.sleep(1);
 							}
 
 							// HTTP 音声認識サーバへの音声データの送信
