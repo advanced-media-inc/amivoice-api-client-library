@@ -4,6 +4,7 @@
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <meta http-equiv="Content-Style-Type" content="text/css">
 <meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>AmiVoice DSR WebSocket Recognition Protocol Checker</title>
 <script type="text/javascript" src="recorder.js"></script>
 <script type="text/javascript" src="wrp.js"></script>
@@ -16,11 +17,11 @@ td {font-size: 14px; border: 1px solid #000;}
   font-family: monospace;
 }
 #issueButton {
-  height: 100%;
+  height: 32px;
   cursor: pointer;
 }
 #resumePauseButton {
-  height: 100%;
+  height: 100px;
   cursor: pointer;
 }
 .recognitionResult {
@@ -61,7 +62,7 @@ td {font-size: 14px; border: 1px solid #000;}
  <tr><td width="240">&nbsp;サービスパスワード</td><td><input type="password" class="text" id="spw" spellcheck="false" autocomplete="on" tabindex="1"></td></tr>
  <tr class="issue_options" style="display:none;"><td width="240">&nbsp;有効期限</td><td><input type="text" class="text" id="epi" spellcheck="false" tabindex="1"></td></tr>
  <tr>
-  <td width="240" height="32">
+  <td width="240">
    <input type="button" value="サービス認証キーの取得" class="text" id="issueButton" tabindex="2">
   </td>
   <td>
@@ -89,7 +90,7 @@ td {font-size: 14px; border: 1px solid #000;}
  <tr class="options" style="display:none;"><td width="240">&nbsp;無発話許容時間 (単位：ミリ秒)</td><td><input type="text" class="text" id="checkIntervalTime" spellcheck="false" tabindex="3"></td></tr>
  <tr class="options" style="display:none;"><td width="240">&nbsp;連続録音可能時間 (単位: ミリ秒)</td><td><input type="text" class="text" id="maxRecordingTime" spellcheck="false" tabindex="3"></td></tr>
  <tr>
-  <td width="240" height="100">
+  <td width="240">
    <button class="text" id="resumePauseButton" tabindex="5">録音の開始</button>
   </td>
   <td class="recognitionResult">
@@ -349,8 +350,6 @@ td {font-size: 14px; border: 1px solid #000;}
   // 音声認識サーバへの接続処理が開始した時に呼び出されます。
   function connectStarted() {
     log_(this.name, "EVENT: connectStarted()");
-    // ボタンの制御
-    resumePauseButton.disabled = true;
   }
 
   // 音声認識サーバへの接続処理が完了した時に呼び出されます。
@@ -389,8 +388,6 @@ td {font-size: 14px; border: 1px solid #000;}
   // 音声認識サーバへの音声データの供給終了処理が開始した時に呼び出されます。
   function feedDataPauseStarted() {
     log_(this.name, "EVENT: feedDataPauseStarted()");
-    // ボタンの制御
-    resumePauseButton.disabled = true;
   }
 
   // 音声認識サーバへの音声データの供給終了処理が完了した時に呼び出されます。
@@ -511,7 +508,7 @@ td {font-size: 14px; border: 1px solid #000;}
 
   // メッセージの出力が要求された時に呼び出されます。
   function TRACE(message) {
-    log_(this.name, message);
+    log_(this.name || "", message);
   }
 
   // 画面要素の取得
@@ -520,9 +517,9 @@ td {font-size: 14px; border: 1px solid #000;}
   var spw = document.getElementById("spw");
   var epi = document.getElementById("epi");
   var issueButton = document.getElementById("issueButton");
-  var grammarFileNames =document.getElementsByClassName("grammarFileNames");
-  var recognitionResultText =document.getElementsByClassName("recognitionResultText");
-  var recognitionResultInfo =document.getElementsByClassName("recognitionResultInfo");
+  var grammarFileNames = document.getElementsByClassName("grammarFileNames");
+  var recognitionResultText = document.getElementsByClassName("recognitionResultText");
+  var recognitionResultInfo = document.getElementsByClassName("recognitionResultInfo");
 
   // 画面要素の初期化
   issuerURL.value = "https://acp-api.amivoice.com/issue_service_authorization";
@@ -589,10 +586,23 @@ td {font-size: 14px; border: 1px solid #000;}
       // 音声認識サーバへの音声データの供給中の場合...
       // 音声認識サーバへの音声データの供給の停止
       Wrp.feedDataPause();
+
+      // ボタンの制御
+      resumePauseButton.disabled = true;
     } else {
       // 音声認識サーバへの音声データの供給中でない場合...
-      // 音声認識サーバへの音声データの供給の開始
-      Wrp.feedDataResume();
+      // グラマファイル名が指定されているかどうかのチェック
+      if (Wrp.grammarFileNamesElement.value != "") {
+        // グラマファイル名が指定されている場合...
+        // 音声認識サーバへの音声データの供給の開始
+        Wrp.feedDataResume();
+
+        // ボタンの制御
+        resumePauseButton.disabled = true;
+      } else {
+        // グラマファイル名が指定されていない場合...
+        // (何もしない)
+      }
     }
   };
   issueButton.onclick = Wrp.issue;

@@ -4,6 +4,7 @@
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <meta http-equiv="Content-Style-Type" content="text/css">
 <meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>AmiVoice DSR HTTP Recognition Protocol Checker</title>
 <script type="text/javascript" src="recorder.js"></script>
 <script type="text/javascript" src="hrp.js"></script>
@@ -16,7 +17,7 @@ td {font-size: 14px; border: 1px solid #000;}
   font-family: monospace;
 }
 #issueButton {
-  height: 100%;
+  height: 32px;
   cursor: pointer;
 }
 #audio {
@@ -26,7 +27,7 @@ td {font-size: 14px; border: 1px solid #000;}
   text-overflow: ellipsis;
 }
 #sendButton {
-  height: 100%;
+  height: 100px;
   cursor: pointer;
 }
 .recognitionResult {
@@ -71,7 +72,7 @@ td {font-size: 14px; border: 1px solid #000;}
  <tr><td width="240">&nbsp;サービスパスワード</td><td><input type="password" class="text" id="spw" spellcheck="false" autocomplete="on" tabindex="1"></td></tr>
  <tr class="issue_options" style="display:none;"><td width="240">&nbsp;有効期限</td><td><input type="text" class="text" id="epi" spellcheck="false" tabindex="1"></td></tr>
  <tr>
-  <td width="240" height="32">
+  <td width="240">
    <input type="button" value="サービス認証キーの取得" class="text" id="issueButton" tabindex="2">
   </td>
   <td>
@@ -102,7 +103,7 @@ td {font-size: 14px; border: 1px solid #000;}
  <tr class="options" style="display:none;"><td width="240">&nbsp;連続録音可能時間 (単位: ミリ秒)</td><td><input type="text" class="text" id="maxRecordingTime" spellcheck="false" tabindex="3"></td></tr>
  <tr><td width="240">&nbsp;<font color="silver">(音声データ)</font></td><td><div id="audio" class="text" tabindex="4"></div></td></tr>
  <tr>
-  <td width="240" height="100">
+  <td width="240">
    <button class="text" id="sendButton" tabindex="5"><br><br>音声データの送信<br><br><span class="supplement">Shift+クリック → 録音の開始</span></button>
   </td>
   <td class="recognitionResult">
@@ -367,8 +368,6 @@ td {font-size: 14px; border: 1px solid #000;}
   // 音声認識サーバへの音声データの供給開始処理が開始した時に呼び出されます。
   function feedDataResumeStarted() {
     log_(this.name, "EVENT: feedDataResumeStarted()");
-    // ボタンの制御
-    sendButton.disabled = true;
   }
 
   // 音声認識サーバへの音声データの供給開始処理が完了した時に呼び出されます。
@@ -395,18 +394,10 @@ td {font-size: 14px; border: 1px solid #000;}
   // 音声認識サーバへの音声データの供給終了処理が完了した時に呼び出されます。
   function feedDataPauseEnded(reason) {
     log_(this.name, "EVENT: feedDataPauseEnded(): reason[code[" + reason.code + "] message[" + reason.message + "]]");
-    // 録音中かどうかのチェック
-    if (Recorder.isActive()) {
-      // 録音中の場合...
-      // 録音の停止
-      Recorder.pause();
-    } else {
-      // 録音中でない場合...
-      // ボタンの制御
-      sendButton.innerHTML = "<br><br>音声データの送信<br><br><span class=\"supplement\">Shift+クリック → 録音の開始</span>";
-      sendButton.disabled = false;
-      sendButton.classList.remove("sending");
-    }
+    // ボタンの制御
+    sendButton.innerHTML = "<br><br>音声データの送信<br><br><span class=\"supplement\">Shift+クリック → 録音の開始</span>";
+    sendButton.disabled = false;
+    sendButton.classList.remove("sending");
   }
 
   // 認識処理が開始された時に呼び出されます。
@@ -511,7 +502,7 @@ td {font-size: 14px; border: 1px solid #000;}
 
   // メッセージの出力が要求された時に呼び出されます。
   function TRACE(message) {
-    log_(this.name, message);
+    log_(this.name || "", message);
   }
 
   // 画面要素の取得
@@ -520,9 +511,9 @@ td {font-size: 14px; border: 1px solid #000;}
   var spw = document.getElementById("spw");
   var epi = document.getElementById("epi");
   var issueButton = document.getElementById("issueButton");
-  var grammarFileNames =document.getElementsByClassName("grammarFileNames");
-  var recognitionResultText =document.getElementsByClassName("recognitionResultText");
-  var recognitionResultInfo =document.getElementsByClassName("recognitionResultInfo");
+  var grammarFileNames = document.getElementsByClassName("grammarFileNames");
+  var recognitionResultText = document.getElementsByClassName("recognitionResultText");
+  var recognitionResultInfo = document.getElementsByClassName("recognitionResultInfo");
 
   // 画面要素の初期化
   issuerURL.value = "https://acp-api.amivoice.com/issue_service_authorization";
@@ -588,26 +579,40 @@ td {font-size: 14px; border: 1px solid #000;}
       // 音声認識サーバへの音声データの供給中の場合...
       // 音声認識サーバへの音声データの供給の停止
       Hrp.feedDataPause();
+
+      // ボタンの制御
+      sendButton.disabled = true;
     } else {
       // 音声認識サーバへの音声データの供給中でない場合...
-      // Shift キーが押されているかどうかのチェック
-      if (e.shiftKey) {
-        // Shift キーが押されている場合...
-        // 音声認識サーバへの音声データの供給の開始
-        Hrp.feedDataResume();
-      } else {
-        // Shift キーが押されていない場合...
-        // 音声データが指定されているかどうかのチェック
-        if (audio.file) {
-          // 音声データが指定されている場合...
+      // グラマファイル名が指定されているかどうかのチェック
+      if (Hrp.grammarFileNamesElement.value != "") {
+        // グラマファイル名が指定されている場合...
+        // Shift キーが押されているかどうかのチェック
+        if (e.shiftKey) {
+          // Shift キーが押されている場合...
           // 音声認識サーバへの音声データの供給の開始
-          if (Hrp.grammarFileNamesElement.value != "") {
-            Hrp.feedDataResume(audio.file);
-          }
+          Hrp.feedDataResume();
+
+          // ボタンの制御
+          sendButton.disabled = true;
         } else {
-          // 音声データが指定されていない場合...
-          // (何もしない)
+          // Shift キーが押されていない場合...
+          // 音声データが指定されているかどうかのチェック
+          if (audio.file) {
+            // 音声データが指定されている場合...
+            // 音声認識サーバへの音声データの供給の開始
+            Hrp.feedDataResume(audio.file);
+
+            // ボタンの制御
+            sendButton.disabled = true;
+          } else {
+            // 音声データが指定されていない場合...
+            // (何もしない)
+          }
         }
+      } else {
+        // グラマファイル名が指定されていない場合...
+        // (何もしない)
       }
     }
   };

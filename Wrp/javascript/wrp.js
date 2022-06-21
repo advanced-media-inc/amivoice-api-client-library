@@ -2,7 +2,7 @@ var Wrp = function() {
 	// public オブジェクト
 	var wrp_ = {
 		// public プロパティ
-		version: "Wrp/1.0.01",
+		version: "Wrp/1.0.02",
 		serverURL: "",
 		serverURLElement: undefined,
 		grammarFileNames: "",
@@ -161,9 +161,14 @@ var Wrp = function() {
 
 		// 録音の開始処理が完了した時に呼び出されます。
 		recorder_.resumeEnded = function(samplesPerSec) {
+			wrp_.codec = "MSB" + (samplesPerSec / 1000 | 0) + "K";
+			if (wrp_.codecElement) wrp_.codecElement.value = wrp_.codec;
+			if (state_ == 0) {
+				connect_();
+			} else
 			if (state_ === 3) {
 				state_ = 4;
-				feedDataResume__(samplesPerSec);
+				feedDataResume__();
 			} else
 			if (state_ === 13) {
 				state_ = 17;
@@ -177,6 +182,10 @@ var Wrp = function() {
 
 		// 録音の開始処理が失敗した時または録音の停止処理が完了した時に呼び出されます。
 		recorder_.pauseEnded = function(reason) {
+			if (state_ == 0) {
+				if (wrp_.feedDataResumeStarted) wrp_.feedDataResumeStarted();
+				if (wrp_.feedDataPauseEnded) wrp_.feedDataPauseEnded(reason);
+			} else
 			if (state_ === 3) {
 				state_ = 2;
 				if (wrp_.feedDataPauseEnded) wrp_.feedDataPauseEnded(reason);
@@ -578,6 +587,12 @@ var Wrp = function() {
 			if (recorder_) {
 				recorder_.TRACE = wrp_.TRACE;
 			}
+			// <!-- for Safari
+			if (recorder_ && !recorder_.isActive()) {
+				recorder_.resume();
+				return true;
+			}
+			// -->
 			return connect_();
 		}
 		if (state_ !== 2) {
@@ -586,12 +601,12 @@ var Wrp = function() {
 		}
 		if (wrp_.feedDataResumeStarted) wrp_.feedDataResumeStarted();
 		state_ = 3;
-		if (recorder_) {
+		if (recorder_ && !recorder_.isActive()) {
 			recorder_.resume();
-		} else {
-			state_ = 4;
-			feedDataResume__();
+			return true;
 		}
+		state_ = 4;
+		feedDataResume__();
 		return true;
 	}
 	function feedDataResume__(samplesPerSec) {
