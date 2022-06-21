@@ -6,17 +6,23 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 
+#if !UNITY_2018_4_OR_NEWER
 [assembly: AssemblyTitle("HrpTester")]
 [assembly: AssemblyProduct("HrpTester")]
-[assembly: AssemblyCopyright("Copyright (C) 2019 Advanced Media, Inc.")]
+[assembly: AssemblyCopyright("Copyright (C) 2019-2021 Advanced Media, Inc.")]
 [assembly: ComVisible(false)]
 [assembly: Guid("c7841911-a965-4734-9222-462422948eed")]
-[assembly: AssemblyVersion("1.0.01.0")]
-[assembly: AssemblyFileVersion("1.0.01.0")]
+[assembly: AssemblyVersion("1.0.03")]
+[assembly: AssemblyFileVersion("1.0.03")]
+#endif
 
 namespace HrpTester {
 
 public class HrpTester : com.amivoice.hrp.HrpListener {
+	#if UNITY_2018_4_OR_NEWER
+	public static PseudoConsole Console;
+	#endif
+
 	public static void Main(string[] args) {
 		// HTTP 音声認識サーバ URL
 		string serverURL = null;
@@ -26,16 +32,14 @@ public class HrpTester : com.amivoice.hrp.HrpListener {
 		List<string> audioFileNames = new List<string>();
 		// グラマファイル名
 		string grammarFileNames = null;
-		// モード
-		string mode = null;
 		// プロファイル ID
 		string profileId = null;
 		// プロファイル登録単語
 		string profileWords = null;
-		// セグメンタタイプ
-		string segmenterType = null;
 		// セグメンタプロパティ
 		string segmenterProperties = null;
+		// フィラー単語を保持するかどうか
+		string keepFillerToken = null;
 		// 認識中イベント発行間隔
 		string resultUpdatedInterval = null;
 		// 拡張情報
@@ -67,7 +71,7 @@ public class HrpTester : com.amivoice.hrp.HrpListener {
 		// 処理ループ (1～)
 		int loop = 1;
 		// スリープ時間
-		int sleepTime = 100;
+		int sleepTime = -2;
 		// 詳細出力
 		bool verbose = false;
 		// 実装タイプ
@@ -78,20 +82,17 @@ public class HrpTester : com.amivoice.hrp.HrpListener {
 			if (arg.StartsWith("g=")) {
 				grammarFileNames = arg.Substring(2);
 			} else
-			if (arg.StartsWith("m=")) {
-				mode = arg.Substring(2);
-			} else
 			if (arg.StartsWith("i=")) {
 				profileId = arg.Substring(2);
 			} else
 			if (arg.StartsWith("w=")) {
 				profileWords = arg.Substring(2);
 			} else
-			if (arg.StartsWith("ot=")) {
-				segmenterType = arg.Substring(3);
-			} else
 			if (arg.StartsWith("op=")) {
 				segmenterProperties = arg.Substring(3);
+			} else
+			if (arg.StartsWith("of=")) {
+				keepFillerToken = arg.Substring(3);
 			} else
 			if (arg.StartsWith("oi=")) {
 				resultUpdatedInterval = arg.Substring(3);
@@ -162,18 +163,20 @@ public class HrpTester : com.amivoice.hrp.HrpListener {
 			} else {
 				audioFileNames.Add(arg);
 			}
+			if (verbose) {
+				Console.WriteLine("DEBUG: " + arg);
+			}
 		}
 		if (audioFileNames.Count == 0) {
-			Console.WriteLine("Usage: HrpTester.exe [<parameters/options>]");
-			Console.WriteLine("                      <url>");
-			Console.WriteLine("                       <audioFileName>...");
+			Console.WriteLine("Usage: HrpTester [<parameters/options>]");
+			Console.WriteLine("                  <url>");
+			Console.WriteLine("                   <audioFileName>...");
 			Console.WriteLine("Parameters:");
 			Console.WriteLine("  g=<grammarFileNames>");
-			Console.WriteLine("  m=<mode>");
 			Console.WriteLine("  i=<profileId>");
 			Console.WriteLine("  w=<profileWords>");
-			Console.WriteLine("  ot=<segmenterType>");
 			Console.WriteLine("  op=<segmenterProperties>");
+			Console.WriteLine("  of=<keepFillerToken>");
 			Console.WriteLine("  oi=<resultUpdatedInterval>");
 			Console.WriteLine("  oe=<extension>");
 			Console.WriteLine("  ou=<authorization>");
@@ -240,11 +243,10 @@ public class HrpTester : com.amivoice.hrp.HrpListener {
 		hrp.setConnectTimeout(connectTimeout);
 		hrp.setReceiveTimeout(receiveTimeout);
 		hrp.setGrammarFileNames(grammarFileNames);
-		hrp.setMode(mode);
 		hrp.setProfileId(profileId);
 		hrp.setProfileWords(profileWords);
-		hrp.setSegmenterType(segmenterType);
 		hrp.setSegmenterProperties(segmenterProperties);
+		hrp.setKeepFillerToken(keepFillerToken);
 		hrp.setResultUpdatedInterval(resultUpdatedInterval);
 		hrp.setExtension(extension);
 		hrp.setAuthorization(authorization);
@@ -349,7 +351,8 @@ public class HrpTester : com.amivoice.hrp.HrpListener {
 									hrp.sleep(sleepTime);
 								} else {
 									// スリープ時間が計算されていない場合...
-									// (何もしない)
+									// 微小時間のスリープ
+									hrp.sleep(1);
 								}
 
 								// HTTP 音声認識サーバへの音声データの送信

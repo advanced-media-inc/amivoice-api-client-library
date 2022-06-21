@@ -19,16 +19,14 @@ class WrpTester(com.amivoice.wrp.WrpListener):
 		audioFileNames = []
 		# グラマファイル名
 		grammarFileNames = None
-		# モード
-		mode = None
 		# プロファイル ID
 		profileId = None
 		# プロファイル登録単語
 		profileWords = None
-		# セグメンタタイプ
-		segmenterType = None
 		# セグメンタプロパティ
 		segmenterProperties = None
+		# フィラー単語を保持するかどうか
+		keepFillerToken = None
 		# 認識中イベント発行間隔
 		resultUpdatedInterval = None
 		# 拡張情報
@@ -41,8 +39,6 @@ class WrpTester(com.amivoice.wrp.WrpListener):
 		resultType = None
 		# サービス認証キー文字列
 		serviceAuthorization = None
-		# 発話区間検出パラメータ文字列
-		voiceDetection = None
 		# 接続タイムアウト
 		connectTimeout = 5000
 		# 受信タイムアウト
@@ -60,16 +56,14 @@ class WrpTester(com.amivoice.wrp.WrpListener):
 		for arg in args:
 			if arg.startswith("g="):
 				grammarFileNames = arg[2:]
-			elif arg.startswith("m="):
-				mode = arg[2:]
 			elif arg.startswith("i="):
 				profileId = arg[2:]
 			elif arg.startswith("w="):
 				profileWords = arg[2:]
-			elif arg.startswith("ot="):
-				segmenterType = arg[3:]
 			elif arg.startswith("op="):
 				segmenterProperties = arg[3:]
+			elif arg.startswith("of="):
+				keepFillerToken = arg[3:]
 			elif arg.startswith("oi="):
 				resultUpdatedInterval = arg[3:]
 			elif arg.startswith("oe="):
@@ -82,8 +76,6 @@ class WrpTester(com.amivoice.wrp.WrpListener):
 				resultType = arg[2:]
 			elif arg.startswith("u="):
 				serviceAuthorization = arg[2:]
-			elif arg.startswith("v="):
-				voiceDetection = arg[2:]
 			elif arg.startswith("-x"):
 				proxyServerName = arg[2:]
 			elif arg.startswith("-c"):
@@ -107,24 +99,24 @@ class WrpTester(com.amivoice.wrp.WrpListener):
 				serverURL = arg
 			else:
 				audioFileNames.append(arg)
+			if verbose:
+				print("DEBUG: %s" % arg)
 		if len(audioFileNames) == 0:
 			print("Usage: python WrpTester.py [<parameters/options>]")
 			print("                            <url>")
 			print("                             <audioFileName>...")
 			print("Parameters:")
 			print("  g=<grammarFileNames>")
-			print("  m=<mode>")
 			print("  i=<profileId>")
 			print("  w=<profileWords>")
-			print("  ot=<segmenterType>")
 			print("  op=<segmenterProperties>")
+			print("  of=<keepFillerToken>")
 			print("  oi=<resultUpdatedInterval>")
 			print("  oe=<extension>")
 			print("  ou=<authorization>")
 			print("  c=<codec>")
 			print("  r=<resultType>")
 			print("  u=<serviceAuthorization>")
-			print("  v=<voiceDetection>")
 			print("Options:")
 			print("  -x<proxyServerName>         (default: -x)")
 			print("  -c<connectionTimeout>       (default: -c5000)")
@@ -166,18 +158,16 @@ class WrpTester(com.amivoice.wrp.WrpListener):
 		wrp.setConnectTimeout(connectTimeout)
 		wrp.setReceiveTimeout(receiveTimeout)
 		wrp.setGrammarFileNames(grammarFileNames)
-		wrp.setMode(mode)
 		wrp.setProfileId(profileId)
 		wrp.setProfileWords(profileWords)
-		wrp.setSegmenterType(segmenterType)
 		wrp.setSegmenterProperties(segmenterProperties)
+		wrp.setKeepFillerToken(keepFillerToken)
 		wrp.setResultUpdatedInterval(resultUpdatedInterval)
 		wrp.setExtension(extension)
 		wrp.setAuthorization(authorization)
 		wrp.setCodec(codec)
 		wrp.setResultType(resultType)
 		wrp.setServiceAuthorization(serviceAuthorization)
-		wrp.setVoiceDetection(voiceDetection)
 
 		# WebSocket 音声認識サーバへの接続
 		if not wrp.connect():
@@ -223,6 +213,9 @@ class WrpTester(com.amivoice.wrp.WrpListener):
 									wrp.sleep(sleepTime)
 								else:
 									# スリープ時間が計算されていない場合...
+									# 微小時間のスリープ
+									wrp.sleep(1)
+
 									# 認識結果情報待機数が 1 以下になるまでスリープ
 									maxSleepTime = 50000
 									while wrp.getWaitingResults() > 1 and maxSleepTime > 0:
@@ -286,6 +279,9 @@ class WrpTester(com.amivoice.wrp.WrpListener):
 		text = self.text_(result)
 		if text != None:
 			print("   -> %s" % text)
+
+	def eventNotified(self, eventId, eventMessage):
+		print(eventId + " " + eventMessage)
 
 	def TRACE(self, message):
 		if self.verbose_:

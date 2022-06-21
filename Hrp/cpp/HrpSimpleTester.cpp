@@ -406,12 +406,8 @@ class HrpSimpleTester : private com::amivoice::hrp::HrpListener {
 				char audioData[4096];
 				int audioDataReadBytes = (int)fread(audioData, 1, 4096, audioStream);
 				while (audioDataReadBytes > 0) {
-
-					// 認識の途中結果を返すイベントに対応しているサーバーを使用し、
-					// イベントの受信処理が必要な場合は、微小時間のスリープが必要です。
-					// 
 					// 微小時間のスリープ
-					// hrp->sleep(100);
+					hrp->sleep(1);
 
 					// HTTP 音声認識サーバへの音声データの送信
 					if (!hrp->feedData(audioData, 0, audioDataReadBytes)) {

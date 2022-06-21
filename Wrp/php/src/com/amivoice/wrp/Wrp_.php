@@ -222,10 +222,10 @@ class Wrp_ extends Wrp {
 			$this->outData_ .= chr(($realDataBytes      ) & 0xFF);
 		} else {
 			$this->outData_ .= chr(127);
-			$this->outData_ .= chr(($realDataBytes >> 56) & 0xFF);
-			$this->outData_ .= chr(($realDataBytes >> 48) & 0xFF);
-			$this->outData_ .= chr(($realDataBytes >> 40) & 0xFF);
-			$this->outData_ .= chr(($realDataBytes >> 32) & 0xFF);
+			$this->outData_ .= chr(0);
+			$this->outData_ .= chr(0);
+			$this->outData_ .= chr(0);
+			$this->outData_ .= chr(0);
 			$this->outData_ .= chr(($realDataBytes >> 24) & 0xFF);
 			$this->outData_ .= chr(($realDataBytes >> 16) & 0xFF);
 			$this->outData_ .= chr(($realDataBytes >>  8) & 0xFF);
@@ -324,11 +324,13 @@ class Wrp_ extends Wrp {
 			if (!$this->read_(8)) {
 				throw new \Exception("Unexpected end of stream");
 			}
-			$inDataBytes = ((ord($this->inData_[0]) & 0xFF) << 56)
-						 | ((ord($this->inData_[1]) & 0xFF) << 48)
-						 | ((ord($this->inData_[2]) & 0xFF) << 40)
-						 | ((ord($this->inData_[3]) & 0xFF) << 32)
-						 | ((ord($this->inData_[4]) & 0xFF) << 24)
+			if (ord($this->inData_[0]) !== 0
+			 || ord($this->inData_[1]) !== 0
+			 || ord($this->inData_[2]) !== 0
+			 || ord($this->inData_[3]) !== 0 || (ord($this->inData_[4]) & 0x80) !== 0) {
+				throw new \Exception("Invalid payload length: " . $inDataBytes);
+			}
+			$inDataBytes = ((ord($this->inData_[4]) & 0xFF) << 24)
 						 | ((ord($this->inData_[5]) & 0xFF) << 16)
 						 | ((ord($this->inData_[6]) & 0xFF) <<  8)
 						 | ((ord($this->inData_[7]) & 0xFF)      );
@@ -345,13 +347,18 @@ class Wrp_ extends Wrp {
 		return true;
 	}
 
-	private function write_($data) {
+	private function write_($data, $dataOffset = 0, $dataLength = 0) {
+		if ($dataLength === 0) {
+			$dataLength = strlen($data) - $dataOffset;
+		}
 		$dataWrittenBytes = 0;
-		while ($dataWrittenBytes < strlen($data)) {
-			$dataCurrentWrittenBytes = @fwrite($this->socket_, substr($data, $dataWrittenBytes));
+		while ($dataLength > 0) {
+			$dataCurrentWrittenBytes = @fwrite($this->socket_, substr($data, $dataOffset, $dataLength));
 			if ($dataCurrentWrittenBytes === false) {
 				throw new \Exception("Can't write data");
 			}
+			$dataOffset += $dataCurrentWrittenBytes;
+			$dataLength -= $dataCurrentWrittenBytes;
 			$dataWrittenBytes += $dataCurrentWrittenBytes;
 		}
 		return $dataWrittenBytes;

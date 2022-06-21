@@ -426,6 +426,8 @@ class Hrp_ : Hrp {
 			}
 		} catch (IOException e) {
 			onError_(e);
+		} catch (ObjectDisposedException e) {
+			onError_(e);
 		}
 	}
 

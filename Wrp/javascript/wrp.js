@@ -2,21 +2,19 @@ var Wrp = function() {
 	// public オブジェクト
 	var wrp_ = {
 		// public プロパティ
-		version: "Wrp/1.0.02",
+		version: "Wrp/1.0.04",
 		serverURL: "",
 		serverURLElement: undefined,
 		grammarFileNames: "",
 		grammarFileNamesElement: undefined,
-		mode: "",
-		modeElement: undefined,
 		profileId: "",
 		profileIdElement: undefined,
 		profileWords: "",
 		profileWordsElement: undefined,
-		segmenterType: "",
-		segmenterTypeElement: undefined,
 		segmenterProperties: "",
 		segmenterPropertiesElement: undefined,
+		keepFillerToken: "",
+		keepFillerTokenElement: undefined,
 		resultUpdatedInterval: "",
 		resultUpdatedIntervalElement: undefined,
 		extension: "",
@@ -60,6 +58,7 @@ var Wrp = function() {
 		resultCreated: undefined,
 		resultUpdated: undefined,
 		resultFinalized: undefined,
+		eventNotified: undefined,
 		issueStarted: undefined,
 		issueEnded: undefined,
 		TRACE: undefined
@@ -254,6 +253,12 @@ var Wrp = function() {
 			return true;
 		}
 		try {
+			if (wrp_.serverURL.startsWith("http://")) {
+				wrp_.serverURL = "ws://" + wrp_.serverURL.substring(7);
+			} else
+			if (wrp_.serverURL.startsWith("https://")) {
+				wrp_.serverURL = "wss://" + wrp_.serverURL.substring(8);
+			}
 			socket_ = new WebSocket(wrp_.serverURL);
 		} catch (e) {
 			if (wrp_.TRACE) wrp_.TRACE("ERROR: can't connect to WebSocket server (" + e.message + ")");
@@ -555,6 +560,12 @@ var Wrp = function() {
 			if (tag === 'R') {
 				if (wrp_.resultFinalized) wrp_.resultFinalized("\x01\x01\x01\x01\x01" + body);
 				startCheckIntervalTimeoutTimer_();
+			} else
+			if (tag === 'Q') {
+				if (wrp_.eventNotified) wrp_.eventNotified(tag, body);
+			} else
+			if (tag === 'G') {
+				if (wrp_.eventNotified) wrp_.eventNotified(tag, body);
 			}
 		};
 		reason_ = null;
@@ -611,11 +622,10 @@ var Wrp = function() {
 	}
 	function feedDataResume__(samplesPerSec) {
 		if (wrp_.grammarFileNamesElement) wrp_.grammarFileNames = wrp_.grammarFileNamesElement.value;
-		if (wrp_.modeElement) wrp_.mode = wrp_.modeElement.value;
 		if (wrp_.profileIdElement) wrp_.profileId = wrp_.profileIdElement.value;
 		if (wrp_.profileWordsElement) wrp_.profileWords = wrp_.profileWordsElement.value;
-		if (wrp_.segmenterTypeElement) wrp_.segmenterType = wrp_.segmenterTypeElement.value;
 		if (wrp_.segmenterPropertiesElement) wrp_.segmenterProperties = wrp_.segmenterPropertiesElement.value;
+		if (wrp_.keepFillerTokenElement) wrp_.keepFillerToken = wrp_.keepFillerTokenElement.value;
 		if (wrp_.resultUpdatedIntervalElement) wrp_.resultUpdatedInterval = wrp_.resultUpdatedIntervalElement.value;
 		if (wrp_.extensionElement) wrp_.extension = wrp_.extensionElement.value;
 		if (wrp_.authorizationElement) wrp_.authorization = wrp_.authorizationElement.value;
@@ -640,20 +650,17 @@ var Wrp = function() {
 		} else {
 			command += " \x01";
 		}
-		if (wrp_.mode) {
-			command += " mode=" + wrp_.mode;
-		}
 		if (wrp_.profileId) {
 			command += " profileId=" + wrp_.profileId;
 		}
 		if (wrp_.profileWords) {
 			command += " profileWords=\"" + wrp_.profileWords.replace(/"/g, "\"\"") + "\"";
 		}
-		if (wrp_.segmenterType) {
-			command += " segmenterType=" + wrp_.segmenterType;
-		}
 		if (wrp_.segmenterProperties) {
 			command += " segmenterProperties=\"" + wrp_.segmenterProperties.replace(/"/g, "\"\"") + "\"";
+		}
+		if (wrp_.keepFillerToken) {
+			command += " keepFillerToken=" + wrp_.keepFillerToken;
 		}
 		if (wrp_.resultUpdatedInterval) {
 			command += " resultUpdatedInterval=" + wrp_.resultUpdatedInterval;
@@ -838,9 +845,9 @@ var Wrp = function() {
 	if (recorder_) {
 		wrp_.version += " " + recorder_.version;
 	}
-	wrp_.serverURL = ((window.location.protocol === "https:") ? "wss:" : "ws:") + "//" + window.location.host + window.location.pathname;
-	wrp_.serverURL = wrp_.serverURL.substring(0, wrp_.serverURL.lastIndexOf('/'));
-	if (wrp_.serverURL.indexOf("/tool", wrp_.serverURL.length - 5) !== -1) {
+	wrp_.serverURL = window.location.protocol + "//" + window.location.host + window.location.pathname;
+	wrp_.serverURL = wrp_.serverURL.substring(0, wrp_.serverURL.lastIndexOf('/') + 1);
+	if (wrp_.serverURL.endsWith("/tool/")) {
 		wrp_.serverURL = wrp_.serverURL.substring(0, wrp_.serverURL.length - 5);
 	}
 	wrp_.serverURL += "/";

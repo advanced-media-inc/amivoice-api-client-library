@@ -8,8 +8,9 @@
 <title>AmiVoice DSR HTTP Recognition Protocol Checker</title>
 <script type="text/javascript" src="recorder.js"></script>
 <script type="text/javascript" src="hrp.js"></script>
+<script type="text/javascript" src="result.js"></script>
 <style type="text/css">
-table {table-layout: fixed;}
+table {table-layout: fixed; height: 1px;}
 td {font-size: 14px; border: 1px solid #000;}
 .text {font-size: 14px; font-family: inconsolata, consolas, monospace; width: 100%; height: 21px; margin: 0; padding: 2px; border: none; box-sizing: border-box;}
 #messages div {
@@ -27,11 +28,11 @@ td {font-size: 14px; border: 1px solid #000;}
   text-overflow: ellipsis;
 }
 #sendButton {
-  height: 100px;
+  height: 100%;
   cursor: pointer;
 }
 .recognitionResult {
-  height: 60px;
+  height: 94px;
   padding: 3px;
 }
 .recognitionResultText {
@@ -67,12 +68,12 @@ td {font-size: 14px; border: 1px solid #000;}
 <body lang="ja">
 <form>
 <table border="0" width="100%" cellspacing="3" cellpadding="0">
- <tr><td width="240">&nbsp;ワンタイムAppKey発行API URL</td><td><input type="text" class="text" id="issuerURL" spellcheck="false" tabindex="1"></td></tr>
- <tr><td width="240">&nbsp;サービス ID</td><td><input type="text" class="text" id="sid" spellcheck="false" tabindex="1"></td></tr>
- <tr><td width="240">&nbsp;サービスパスワード</td><td><input type="password" class="text" id="spw" spellcheck="false" autocomplete="on" tabindex="1"></td></tr>
- <tr class="issue_options" style="display:none;"><td width="240">&nbsp;有効期限</td><td><input type="text" class="text" id="epi" spellcheck="false" tabindex="1"></td></tr>
+ <tr><td width="270">&nbsp;ワンタイムAppKey発行API URL</td><td><input type="text" class="text" id="issuerURL" spellcheck="false" tabindex="1"></td></tr>
+ <tr><td>&nbsp;サービス ID</td><td><input type="text" class="text" id="sid" spellcheck="false" tabindex="1"></td></tr>
+ <tr><td>&nbsp;サービスパスワード</td><td><input type="password" class="text" id="spw" spellcheck="false" autocomplete="on" tabindex="1"></td></tr>
+ <tr class="issue_options" style="display:none;"><td>&nbsp;有効期限</td><td><input type="text" class="text" id="epi" spellcheck="false" tabindex="1"></td></tr>
  <tr>
-  <td width="240">
+  <td>
    <input type="button" value="サービス認証キーの取得" class="text" id="issueButton" tabindex="2">
   </td>
   <td>
@@ -85,25 +86,24 @@ td {font-size: 14px; border: 1px solid #000;}
  「サービス ID」「サービスパスワード」を入力した後に <b>[サービス認証キーの取得]</b> ボタンを押して、「サービス認証キー」を取得してください<span class="toggle_issue_options">。</span>
 </div>
 <table border="0" width="100%" cellspacing="3" cellpadding="0">
- <tr><td width="240">&nbsp;サーバ URL</td><td><input type="text" class="text" id="serverURL" spellcheck="false" tabindex="3"></td></tr>
- <tr><td width="240">&nbsp;接続エンジン名</td><td><input type="text" class="text grammarFileNames" spellcheck="false" tabindex="3"></td></tr>
- <tr class="options" style="display:none;"><td width="240">&nbsp;モード</td><td><input type="text" class="text" id="mode" spellcheck="false" tabindex="3"></td></tr>
- <tr><td width="240">&nbsp;プロファイル ID</td><td><input type="text" class="text" id="profileId" spellcheck="false" tabindex="3"></td></tr>
- <tr class="options" style="display:none;"><td width="240">&nbsp;プロファイル単語</td><td><input type="text" class="text" id="profileWords" spellcheck="false" tabindex="3"></td></tr>
- <tr class="options" style="display:none;"><td width="240">&nbsp;<font color="silver">セグメンタタイプ</font></td><td><input type="text" class="text" id="segmenterType" spellcheck="false" tabindex="3"></td></tr>
- <tr class="options" style="display:none;"><td width="240">&nbsp;<font color="silver">セグメンタプロパティ文字列</font></td><td><input type="text" class="text" id="segmenterProperties" spellcheck="false" tabindex="3"></td></tr>
- <tr class="options" style="display:none;"><td width="240">&nbsp;認識中イベント発行間隔 (単位：ミリ秒)</td><td><input type="text" class="text" id="resultUpdatedInterval" spellcheck="false" tabindex="3"></td></tr>
- <tr class="options" style="display:none;"><td width="240">&nbsp;拡張情報</td><td><input type="text" class="text" id="extension" spellcheck="false" tabindex="3"></td></tr>
- <tr class="options" style="display:none;"><td width="240">&nbsp;<font color="silver">サービス認証キー</font></td><td><input type="text" class="text" id="authorization" spellcheck="false" tabindex="3"></td></tr>
- <tr class="options" style="display:none;"><td width="240">&nbsp;音声データ形式</td><td><input type="text" class="text" id="codec" spellcheck="false" tabindex="3"></td></tr>
- <tr class="options" style="display:none;"><td width="240">&nbsp;認識結果タイプ</td><td><input type="text" class="text" id="resultType" spellcheck="false" tabindex="3"></td></tr>
- <tr class="options" style="display:none;"><td width="240">&nbsp;<font color="silver">認識結果文字エンコーディング</font></td><td><input type="text" class="text" id="resultEncoding" spellcheck="false" tabindex="3"></td></tr>
- <tr><td width="240">&nbsp;APPKEY</td><td><input type="text" class="text" id="serviceAuthorization" spellcheck="false" tabindex="3"></td></tr>
- <tr class="options" style="display:none;"><td width="240">&nbsp;発話区間検出パラメータ情報</td><td><input type="text" class="text" id="voiceDetection" spellcheck="false" tabindex="3"></td></tr>
- <tr class="options" style="display:none;"><td width="240">&nbsp;連続録音可能時間 (単位: ミリ秒)</td><td><input type="text" class="text" id="maxRecordingTime" spellcheck="false" tabindex="3"></td></tr>
- <tr><td width="240">&nbsp;<font color="silver">(音声データ)</font></td><td><div id="audio" class="text" tabindex="4"></div></td></tr>
+ <tr><td width="270">&nbsp;サーバ URL</td><td><input type="text" class="text" id="serverURL" spellcheck="false" tabindex="3"></td></tr>
+ <tr><td>&nbsp;接続エンジン名</td><td><input type="text" class="text grammarFileNames" spellcheck="false" tabindex="3"></td></tr>
+ <tr class="options" style="display:none;"><td>&nbsp;プロファイル ID</td><td><input type="text" class="text" id="profileId" spellcheck="false" tabindex="3"></td></tr>
+ <tr class="options" style="display:none;"><td>&nbsp;プロファイル単語</td><td><input type="text" class="text" id="profileWords" spellcheck="false" tabindex="3"></td></tr>
+ <tr class="options" style="display:none;"><td>&nbsp;<font color="silver">セグメンタプロパティ文字列</font></td><td><input type="text" class="text" id="segmenterProperties" spellcheck="false" tabindex="3"></td></tr>
+ <tr class="options" style="display:none;"><td>&nbsp;フィラー単語を保持するかどうか</td><td><input type="text" class="text" id="keepFillerToken" spellcheck="false" tabindex="3"></td></tr>
+ <tr class="options" style="display:none;"><td>&nbsp;認識中イベント発行間隔 (単位：ミリ秒)</td><td><input type="text" class="text" id="resultUpdatedInterval" spellcheck="false" tabindex="3"></td></tr>
+ <tr class="options" style="display:none;"><td>&nbsp;拡張情報</td><td><input type="text" class="text" id="extension" spellcheck="false" tabindex="3"></td></tr>
+ <tr class="options" style="display:none;"><td>&nbsp;<font color="silver">サービス認証キー</font></td><td><input type="text" class="text" id="authorization" spellcheck="false" tabindex="3"></td></tr>
+ <tr class="options" style="display:none;"><td>&nbsp;音声データ形式</td><td><input type="text" class="text" id="codec" spellcheck="false" tabindex="3"></td></tr>
+ <tr class="options" style="display:none;"><td>&nbsp;認識結果タイプ</td><td><input type="text" class="text" id="resultType" spellcheck="false" tabindex="3"></td></tr>
+ <tr class="options" style="display:none;"><td>&nbsp;<font color="silver">認識結果文字エンコーディング</font></td><td><input type="text" class="text" id="resultEncoding" spellcheck="false" tabindex="3"></td></tr>
+ <tr><td>&nbsp;APPKEY</td><td><input type="text" class="text" id="serviceAuthorization" spellcheck="false" tabindex="3"></td></tr>
+ <tr class="options" style="display:none;"><td>&nbsp;発話区間検出パラメータ情報</td><td><input type="text" class="text" id="voiceDetection" spellcheck="false" tabindex="3"></td></tr>
+ <tr class="options" style="display:none;"><td>&nbsp;連続録音可能時間 (単位: ミリ秒)</td><td><input type="text" class="text" id="maxRecordingTime" spellcheck="false" tabindex="3"></td></tr>
+ <tr><td>&nbsp;<font color="silver">(音声データ)</font></td><td><div id="audio" class="text" tabindex="4"></div></td></tr>
  <tr>
-  <td width="240">
+  <td>
    <button class="text" id="sendButton" tabindex="5"><br><br>音声データの送信<br><br><span class="supplement">Shift+クリック → 録音の開始</span></button>
   </td>
   <td class="recognitionResult">
@@ -154,216 +154,6 @@ td {font-size: 14px; border: 1px solid #000;}
             .replace(/'/g, '&apos;')
             .replace(/"/g, '&quot;');
   }
-  var buffer;
-  var bufferEnding;
-  function append_(item) {
-    if (item.length == 0) {
-      return;
-    }
-    if (item == "<->") {
-      return;
-    }
-    var itemState = 0;
-    for (var i = 0; i < item.length; i++) {
-      var c = item.charCodeAt(i);
-      if (itemState == 0) {
-        if (c == 0x005F) {
-          break;
-        } else
-        if (c == 0x4E00 || c == 0x4E8C || c == 0x4E09 || c == 0x56DB || c == 0x4E94 || c == 0x516D || c == 0x4E03 || c == 0x516B || c == 0x4E5D) { // '一'～'九'
-          itemState = 1;
-        } else
-        if (c == 0x5341) { // '十'
-          itemState = 2;
-        } else
-        if (c == 0x767E) { // '百'
-          itemState = 4;
-        } else
-        if (c == 0x5343) { // '千'
-          itemState = 8;
-        } else {
-          break;
-        }
-      } else {
-        if (c == 0x005F) {
-          item = item.substr(0, i) + item.substr(i + 1);
-          break;
-        } else
-        if (c == 0x4E00 || c == 0x4E8C || c == 0x4E09 || c == 0x56DB || c == 0x4E94 || c == 0x516D || c == 0x4E03 || c == 0x516B || c == 0x4E5D) { // '一'～'九'
-          if ((itemState & 1) != 0) {
-            break;
-          } else {
-            itemState |= 1;
-          }
-        } else
-        if (c == 0x5341) { // '十'
-          if ((itemState & 2) != 0) {
-            break;
-          } else {
-            itemState |= 2;
-            itemState &= ~1;
-          }
-        } else
-        if (c == 0x767E) { // '百'
-          if ((itemState & 6) != 0) {
-            break;
-          } else {
-            itemState |= 4;
-            itemState &= ~1;
-          }
-        } else
-        if (c == 0x5343) { // '千'
-          if ((itemState & 14) != 0) {
-            break;
-          } else {
-            itemState |= 8;
-            itemState &= ~1;
-          }
-        } else {
-          break;
-        }
-      }
-    }
-    item = item.replace(/_/g, " ");
-    var itemBeginningChar = item.charCodeAt(0);
-    var itemEndingChar = (item.length > 1) ? item.charCodeAt(item.length - 1) : 0;
-    if (bufferEnding == 0) {
-      var itemBeginning;
-      var c = itemBeginningChar;
-      if (c == 0x0020) {
-        itemBeginning = 0;
-      } else
-      if (c == 0x0021
-       || c == 0x002C
-       || c == 0x002E
-       || c == 0x003A
-       || c == 0x003B
-       || c == 0x003F) {
-        itemBeginning = 5;
-      } else
-      if (c == 0x3001
-       || c == 0x3002
-       || c == 0xFF01
-       || c == 0xFF0C
-       || c == 0xFF0E
-       || c == 0xFF1A
-       || c == 0xFF1B
-       || c == 0xFF1F) {
-        itemBeginning = 6;
-      } else {
-        itemBeginning = 7;
-      }
-      if (itemBeginning == 0
-       || itemBeginning == 5
-       || itemBeginning == 6) {
-        if (buffer.length > 0) {
-          buffer = buffer.substr(0, buffer.length - 1);
-        }
-      }
-    } else {
-      var itemBeginning;
-      var c = itemBeginningChar;
-      if (c == 0x0020) {
-        itemBeginning = 0;
-      } else
-      if (c >= 0x0041 && c <= 0x005A
-       || c >= 0x0061 && c <= 0x007A
-       || c >= 0x0100 && c <= 0x0DFF
-       || c >= 0x0E60 && c <= 0x01FF) {
-        itemBeginning = 1;
-      } else
-      if (c >= 0xFF21 && c <= 0xFF3A
-       || c >= 0xFF41 && c <= 0xFF5A) {
-        itemBeginning = 2;
-      } else
-      if (c >= 0x0030 && c <= 0x0039) {
-        itemBeginning = (bufferEnding == 8 && itemEndingChar == 0) ? 8 : 3;
-      } else
-      if (c >= 0xFF10 && c <= 0xFF19) {
-        itemBeginning = (bufferEnding == 9 && itemEndingChar == 0) ? 9 : 4;
-      } else
-      if (c == 0x0021
-       || c == 0x002C
-       || c == 0x002E
-       || c == 0x003A
-       || c == 0x003B
-       || c == 0x003F) {
-        itemBeginning = 5;
-      } else
-      if (c == 0x3001
-       || c == 0x3002
-       || c == 0xFF01
-       || c == 0xFF0C
-       || c == 0xFF0E
-       || c == 0xFF1A
-       || c == 0xFF1B
-       || c == 0xFF1F) {
-        itemBeginning = 6;
-      } else {
-        itemBeginning = 7;
-      }
-      if (itemBeginning == 1 || bufferEnding == 1 && (itemBeginning == 2
-                                                   || itemBeginning == 3
-                                                   || itemBeginning == 4
-                                                   || itemBeginning == 7)
-                             || bufferEnding == 2 && (itemBeginning == 2)
-                             || bufferEnding == 3 && (itemBeginning == 3
-                                                   || itemBeginning == 4)
-                             || bufferEnding == 4 && (itemBeginning == 3
-                                                   || itemBeginning == 4)
-                             || bufferEnding == 5 && (itemBeginning == 2
-                                                   || itemBeginning == 3
-                                                   || itemBeginning == 4
-                                                   || itemBeginning == 7)
-                             || bufferEnding == 8 && (itemBeginning == 3
-                                                   || itemBeginning == 4)
-                             || bufferEnding == 9 && (itemBeginning == 3
-                                                   || itemBeginning == 4)) {
-        buffer += " ";
-      }
-    }
-    buffer += item;
-    c = (itemEndingChar == 0) ? itemBeginningChar : itemEndingChar;
-    if (c == 0x0020) {
-      bufferEnding = 0;
-    } else
-    if (c >= 0x0041 && c <= 0x005A
-     || c >= 0x0061 && c <= 0x007A
-     || c >= 0x0100 && c <= 0x0DFF
-     || c >= 0x0E60 && c <= 0x01FF) {
-      bufferEnding = 1;
-    } else
-    if (c >= 0xFF21 && c <= 0xFF3A
-     || c >= 0xFF41 && c <= 0xFF5A) {
-      bufferEnding = 2;
-    } else
-    if (c >= 0x0030 && c <= 0x0039) {
-      bufferEnding = (itemEndingChar == 0) ? 8 : 3;
-    } else
-    if (c >= 0xFF10 && c <= 0xFF19) {
-      bufferEnding = (itemEndingChar == 0) ? 9 : 4;
-    } else
-    if (c == 0x0021
-     || c == 0x002C
-     || c == 0x002E
-     || c == 0x003A
-     || c == 0x003B
-     || c == 0x003F) {
-      bufferEnding = 5;
-    } else
-    if (c == 0x3001
-     || c == 0x3002
-     || c == 0xFF01
-     || c == 0xFF0C
-     || c == 0xFF0E
-     || c == 0xFF1A
-     || c == 0xFF1B
-     || c == 0xFF1F) {
-      bufferEnding = 6;
-    } else {
-      bufferEnding = 7;
-    }
-  }
   // -->
   // 音声認識サーバへの音声データの供給開始処理が開始した時に呼び出されます。
   function feedDataResumeStarted() {
@@ -388,7 +178,7 @@ td {font-size: 14px; border: 1px solid #000;}
     sendButton.classList.add("sending");
     this.recognitionResultText.innerHTML = "...";
     this.recognitionResultInfo.innerHTML = "";
-    this.time2 = new Date().getTime();
+    this.startTime = new Date().getTime();
   }
 
   // 音声認識サーバへの音声データの供給終了処理が完了した時に呼び出されます。
@@ -410,94 +200,24 @@ td {font-size: 14px; border: 1px solid #000;}
   // 認識処理中に呼び出されます。
   function resultUpdated(result) {
     log_(this.name, "EVENT: resultUpdated(): result[" + result + "]");
-    try {
-      var json = JSON.parse(result);
-      buffer = (json.text) ? sanitize_(json.text) : "...";
-    } catch (e) {
-      if (result.indexOf("\x01") == -1) {
-        buffer = (result) ? sanitize_(result) : "...";
-      } else {
-        var fields = result.split("\x01");
-        var fields0 = fields[0].split("|");
-        // <!--
-        buffer = "";
-        bufferEnding = 0;
-        // -->
-        var i, j;
-        for (i = 0; i < fields0.length; i++) {
-          var written = fields0[i];
-          if ((j = written.indexOf(" ")) != -1) {
-            written = written.slice(0, j);
-          }
-          if ((j = written.indexOf(":")) != -1) {
-            written = written.slice(0, j);
-          }
-          if ((j = written.indexOf("\x03")) != -1) {
-            written = written.slice(0, j);
-          }
-          // <!--
-          append_(written);
-          // -->
-        }
-        buffer = (buffer) ? sanitize_(buffer) : "...";
-      }
-    }
-    this.recognitionResultText.innerHTML = buffer;
+    result = Result.parse(result);
+    var text = (result.text) ? sanitize_(result.text) : "...";
+    this.recognitionResultText.innerHTML = text;
   }
 
   // 認識処理が確定した時に呼び出されます。
   function resultFinalized(result) {
     log_(this.name, "EVENT: resultFinalized(): result[" + result + "]");
-    this.time0 = (this.audio.name) ? 0 : this.audio.samples / this.audio.samplesPerSec * 1000;
-    this.time2 = new Date().getTime() - this.time2;
-    this.confidence = -1.0;
-    try {
-      var json = JSON.parse(result);
-      buffer = (json.text) ? sanitize_(json.text) : (json.code != 'o' && json.message) ? "<font color=\"gray\">(" + json.message + ")</font>" : "<font color=\"gray\">(なし)</font>";
-      if (json.results && json.results[0]) {
-        if (this.time0 == 0) {
-          this.time0 = json.results[0].endtime;
-        }
-        this.confidence = json.results[0].confidence;
-      }
-    } catch (e) {
-      if (result.indexOf("\x01") == -1) {
-        buffer = (result) ? sanitize_(result) : "<font color=\"gray\">(なし)</font>";
-      } else {
-        var fields = result.split("\x01");
-        var fields0 = fields[0].split("|");
-        // <!--
-        buffer = "";
-        bufferEnding = 0;
-        // -->
-        var i, j;
-        for (i = 0; i < fields0.length; i++) {
-          var written = fields0[i];
-          if ((j = written.indexOf(" ")) != -1) {
-            written = written.slice(0, j);
-          }
-          if ((j = written.indexOf(":")) != -1) {
-            written = written.slice(0, j);
-          }
-          if ((j = written.indexOf("\x03")) != -1) {
-            written = written.slice(0, j);
-          }
-          // <!--
-          append_(written);
-          // -->
-        }
-        buffer = (buffer) ? sanitize_(buffer) : "<font color=\"gray\">(なし)</font>";
-        if (this.time0 == 0) {
-          this.time0 = parseInt(fields[2].split("-")[1]);
-        }
-        this.confidence = parseFloat(fields[1]);
-      }
-    }
-    var rt = ((this.time0 > 0) ? (this.time2 / this.time0).toFixed(2) : "-") + " (" + (this.time2 / 1000).toFixed(2) + "/" + ((this.time0 > 0) ? (this.time0 / 1000).toFixed(2) : "-") + ")";
-    var cf = (this.confidence >= 0.0) ? this.confidence.toFixed(2) : "-";
-    this.recognitionResultText.innerHTML = buffer;
+    result = Result.parse(result);
+    var text = (result.text) ? sanitize_(result.text) : (result.code != 'o' && result.message) ? "<font color=\"gray\">(" + result.message + ")</font>" : "<font color=\"gray\">(なし)</font>";
+    var duration = (this.audio.name) ? result.duration : this.audio.samples / this.audio.samplesPerSec * 1000;
+    var elapsedTime = new Date().getTime() - this.startTime;
+    var confidence = result.confidence;
+    var rt = ((duration > 0) ? (elapsedTime / duration).toFixed(2) : "-") + " (" + (elapsedTime / 1000).toFixed(2) + "/" + ((duration > 0) ? (duration / 1000).toFixed(2) : "-") + ")";
+    var cf = (confidence >= 0.0) ? confidence.toFixed(2) : "-";
+    this.recognitionResultText.innerHTML = text;
     this.recognitionResultInfo.innerHTML = "RT: " + rt + "<br>CF: " + cf;
-    log_(this.name, buffer + " <font color=\"darkgray\">(RT: " + rt + ") (CF: " + cf + ")</font>");
+    log_(this.name, text + " <font color=\"darkgray\">(RT: " + rt + ") (CF: " + cf + ")</font>");
   }
 
   // メッセージの出力が要求された時に呼び出されます。
@@ -519,11 +239,10 @@ td {font-size: 14px; border: 1px solid #000;}
   issuerURL.value = "https://acp-api.amivoice.com/issue_service_authorization";
   serverURL.value = "https://acp-api.amivoice.com/v1/recognize";
   grammarFileNames[0].value = Hrp.grammarFileNames;
-  mode.value = Hrp.mode;
   profileId.value = Hrp.profileId;
   profileWords.value = Hrp.profileWords;
-  segmenterType.value = Hrp.segmenterType;
   segmenterProperties.value = Hrp.segmenterProperties;
+  keepFillerToken.value = Hrp.keepFillerToken;
   resultUpdatedInterval.value = Hrp.resultUpdatedInterval;
   extension.value = Hrp.extension;
   authorization.value = Hrp.authorization;
@@ -537,11 +256,10 @@ td {font-size: 14px; border: 1px solid #000;}
   // 音声認識ライブラリのプロパティ要素の設定
   Hrp.serverURLElement = serverURL;
   Hrp.grammarFileNamesElement = grammarFileNames[0];
-  Hrp.modeElement = mode;
   Hrp.profileIdElement = profileId;
   Hrp.profileWordsElement = profileWords;
-  Hrp.segmenterTypeElement = segmenterType;
   Hrp.segmenterPropertiesElement = segmenterProperties;
+  Hrp.keepFillerTokenElement = keepFillerToken;
   Hrp.resultUpdatedIntervalElement = resultUpdatedInterval;
   Hrp.extensionElement = extension;
   Hrp.authorizationElement = authorization;

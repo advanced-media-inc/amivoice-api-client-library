@@ -5,6 +5,7 @@
 #include "Poco/URI.h"
 #include "com/amivoice/hrp/Hrp.h"
 #include "com/amivoice/hrp/Hrp_.h"
+#include "com/amivoice/hrp/Hrp__.h"
 #include "com/amivoice/hrp/HrpListener.h"
 
 static const std::string NULL_STRING = "\x7F";
@@ -16,7 +17,7 @@ namespace hrp {
 
 #define __STRING(x) #x
 #define _STRING(x) __STRING(x)
-const char* Hrp::VERSION = "Hrp/1.0.01"
+const char* Hrp::VERSION = "Hrp/1.0.03"
 #ifdef _MSC_VER
 	" MSVC/" _STRING(_MSC_VER)
 #endif
@@ -47,6 +48,9 @@ const char* Hrp::getVersion() {
 Hrp* Hrp::construct(int implementation /* = 1 */) {
 	if (implementation == 1) {
 		return new Hrp_();
+	} else
+	if (implementation == 2) {
+		return new Hrp__();
 	} else {
 		char message[256];
 		std::sprintf(message, "Unknown implementation: %d", implementation);
@@ -61,11 +65,10 @@ Hrp::Hrp() {
 	connectTimeout_ = 0;
 	receiveTimeout_ = 0;
 	grammarFileNames_ = NULL_STRING;
-	mode_ = NULL_STRING;
 	profileId_ = NULL_STRING;
 	profileWords_ = NULL_STRING;
-	segmenterType_ = NULL_STRING;
 	segmenterProperties_ = NULL_STRING;
+	keepFillerToken_ = NULL_STRING;
 	resultUpdatedInterval_ = NULL_STRING;
 	extension_ = NULL_STRING;
 	authorization_ = NULL_STRING;
@@ -108,10 +111,6 @@ void Hrp::setGrammarFileNames(const char* grammarFileNames) {
 	grammarFileNames_ = (grammarFileNames == NULL) ? NULL_STRING : grammarFileNames;
 }
 
-void Hrp::setMode(const char* mode) {
-	mode_ = (mode == NULL) ? NULL_STRING : mode;
-}
-
 void Hrp::setProfileId(const char* profileId) {
 	profileId_ = (profileId == NULL) ? NULL_STRING : profileId;
 }
@@ -120,12 +119,12 @@ void Hrp::setProfileWords(const char* profileWords) {
 	profileWords_ = (profileWords == NULL) ? NULL_STRING : profileWords;
 }
 
-void Hrp::setSegmenterType(const char* segmenterType) {
-	segmenterType_ = (segmenterType == NULL) ? NULL_STRING : segmenterType;
-}
-
 void Hrp::setSegmenterProperties(const char* segmenterProperties) {
 	segmenterProperties_ = (segmenterProperties == NULL) ? NULL_STRING : segmenterProperties;
+}
+
+void Hrp::setKeepFillerToken(const char* keepFillerToken) {
+	keepFillerToken_ = (keepFillerToken == NULL) ? NULL_STRING : keepFillerToken;
 }
 
 void Hrp::setResultUpdatedInterval(const char* resultUpdatedInterval) {
@@ -299,13 +298,6 @@ bool Hrp::feedDataResume(const char* type, long long dataBytes) {
 				domainId += "grammarFileNames=";
 				Poco::URI::encode(grammarFileNames_, RESERVED_FRAGMENT, domainId);
 			}
-			if (mode_ != NULL_STRING) {
-				if (domainId.length() > 0) {
-					domainId += ' ';
-				}
-				domainId += "mode=";
-				Poco::URI::encode(mode_, RESERVED_FRAGMENT, domainId);
-			}
 			if (profileId_ != NULL_STRING) {
 				if (domainId.length() > 0) {
 					domainId += ' ';
@@ -320,19 +312,19 @@ bool Hrp::feedDataResume(const char* type, long long dataBytes) {
 				domainId += "profileWords=";
 				Poco::URI::encode(profileWords_, RESERVED_FRAGMENT, domainId);
 			}
-			if (segmenterType_ != NULL_STRING) {
-				if (domainId.length() > 0) {
-					domainId += ' ';
-				}
-				domainId += "segmenterType=";
-				Poco::URI::encode(segmenterType_, RESERVED_FRAGMENT, domainId);
-			}
 			if (segmenterProperties_ != NULL_STRING) {
 				if (domainId.length() > 0) {
 					domainId += ' ';
 				}
 				domainId += "segmenterProperties=";
 				Poco::URI::encode(segmenterProperties_, RESERVED_FRAGMENT, domainId);
+			}
+			if (keepFillerToken_ != NULL_STRING) {
+				if (domainId.length() > 0) {
+					domainId += ' ';
+				}
+				domainId += "keepFillerToken=";
+				Poco::URI::encode(keepFillerToken_, RESERVED_FRAGMENT, domainId);
 			}
 			if (resultUpdatedInterval_ != NULL_STRING) {
 				if (domainId.length() > 0) {

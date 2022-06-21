@@ -281,37 +281,37 @@ class Hrp_ extends Hrp {
 					$this->requestBodyPartedOffset_ = strlen($this->requestBodyParted_) - 28;
 					if ($this->requestBodyChunked_ !== null) {
 						$this->write_(dechex($this->requestBodyPartedOffset_));
-						$this->write_(substr($this->requestBodyChunked_, 1, 2));
+						$this->write_($this->requestBodyChunked_, 1, 2);
 					}
-					$this->write_(substr($this->requestBodyParted_, 0, $this->requestBodyPartedOffset_));
+					$this->write_($this->requestBodyParted_, 0, $this->requestBodyPartedOffset_);
 					if ($this->requestBodyChunked_ !== null) {
-						$this->write_(substr($this->requestBodyChunked_, 3, 2));
+						$this->write_($this->requestBodyChunked_, 3, 2);
 					}
 				}
 			}
 			if ($this->requestBodyChunked_ !== null) {
 				$this->write_(dechex($dataBytes));
-				$this->write_(substr($this->requestBodyChunked_, 1, 2));
+				$this->write_($this->requestBodyChunked_, 1, 2);
 			}
-			$this->write_(substr($data, $dataOffset, $dataBytes));
+			$this->write_($data, $dataOffset, $dataBytes);
 			if ($this->requestBodyChunked_ !== null) {
-				$this->write_(substr($this->requestBodyChunked_, 3, 2));
+				$this->write_($this->requestBodyChunked_, 3, 2);
 			}
 			fflush($this->socket_);
 		} else {
 			if ($this->requestBodyParted_ !== null) {
 				if ($this->requestBodyChunked_ !== null) {
 					$this->write_(dechex(strlen($this->requestBodyParted_) - $this->requestBodyPartedOffset_));
-					$this->write_(substr($this->requestBodyChunked_, 1, 2));
+					$this->write_($this->requestBodyChunked_, 1, 2);
 				}
-				$this->write_(substr($this->requestBodyParted_, $this->requestBodyPartedOffset_));
+				$this->write_($this->requestBodyParted_, $this->requestBodyPartedOffset_, strlen($this->requestBodyParted_) - $this->requestBodyPartedOffset_);
 				if ($this->requestBodyChunked_ !== null) {
-					$this->write_(substr($this->requestBodyChunked_, 3, 2));
-					$this->write_(substr($this->requestBodyChunked_, 0, 5));
+					$this->write_($this->requestBodyChunked_, 3, 2);
+					$this->write_($this->requestBodyChunked_, 0, 5);
 				}
 			} else {
 				if ($this->requestBodyChunked_ !== null) {
-					$this->write_(substr($this->requestBodyChunked_, 0, 5));
+					$this->write_($this->requestBodyChunked_, 0, 5);
 				}
 			}
 			fflush($this->socket_);
@@ -513,13 +513,18 @@ class Hrp_ extends Hrp {
 		return true;
 	}
 
-	private function write_($data) {
+	private function write_($data, $dataOffset = 0, $dataLength = 0) {
+		if ($dataLength === 0) {
+			$dataLength = strlen($data) - $dataOffset;
+		}
 		$dataWrittenBytes = 0;
-		while ($dataWrittenBytes < strlen($data)) {
-			$dataCurrentWrittenBytes = @fwrite($this->socket_, substr($data, $dataWrittenBytes));
+		while ($dataLength > 0) {
+			$dataCurrentWrittenBytes = @fwrite($this->socket_, substr($data, $dataOffset, $dataLength));
 			if ($dataCurrentWrittenBytes === false) {
 				throw new \Exception("Can't write data");
 			}
+			$dataOffset += $dataCurrentWrittenBytes;
+			$dataLength -= $dataCurrentWrittenBytes;
 			$dataWrittenBytes += $dataCurrentWrittenBytes;
 		}
 		return $dataWrittenBytes;

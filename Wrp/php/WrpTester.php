@@ -37,16 +37,14 @@ class WrpTester implements com\amivoice\wrp\WrpListener {
 		$audioFileNames = [];
 		// グラマファイル名
 		$grammarFileNames = null;
-		// モード
-		$mode = null;
 		// プロファイル ID
 		$profileId = null;
 		// プロファイル登録単語
 		$profileWords = null;
-		// セグメンタタイプ
-		$segmenterType = null;
 		// セグメンタプロパティ
 		$segmenterProperties = null;
+		// フィラー単語を保持するかどうか
+		$keepFillerToken = null;
 		// 認識中イベント発行間隔
 		$resultUpdatedInterval = null;
 		// 拡張情報
@@ -59,8 +57,6 @@ class WrpTester implements com\amivoice\wrp\WrpListener {
 		$resultType = null;
 		// サービス認証キー文字列
 		$serviceAuthorization = null;
-		// 発話区間検出パラメータ文字列
-		$voiceDetection = null;
 		// 接続タイムアウト
 		$connectTimeout = 5000;
 		// 受信タイムアウト
@@ -79,20 +75,17 @@ class WrpTester implements com\amivoice\wrp\WrpListener {
 			if (strlen($arg) >= 2 && substr_compare($arg, "g=", 0, 2) === 0) {
 				$grammarFileNames = substr($arg, 2);
 			} else
-			if (strlen($arg) >= 2 && substr_compare($arg, "m=", 0, 2) === 0) {
-				$mode = substr($arg, 2);
-			} else
 			if (strlen($arg) >= 2 && substr_compare($arg, "i=", 0, 2) === 0) {
 				$profileId = substr($arg, 2);
 			} else
 			if (strlen($arg) >= 2 && substr_compare($arg, "w=", 0, 2) === 0) {
 				$profileWords = substr($arg, 2);
 			} else
-			if (strlen($arg) >= 3 && substr_compare($arg, "ot=", 0, 3) === 0) {
-				$segmenterType = substr($arg, 3);
-			} else
 			if (strlen($arg) >= 3 && substr_compare($arg, "op=", 0, 3) === 0) {
 				$segmenterProperties = substr($arg, 3);
+			} else
+			if (strlen($arg) >= 3 && substr_compare($arg, "of=", 0, 3) === 0) {
+				$keepFillerToken = substr($arg, 3);
 			} else
 			if (strlen($arg) >= 3 && substr_compare($arg, "oi=", 0, 3) === 0) {
 				$resultUpdatedInterval = substr($arg, 3);
@@ -111,9 +104,6 @@ class WrpTester implements com\amivoice\wrp\WrpListener {
 			} else
 			if (strlen($arg) >= 2 && substr_compare($arg, "u=", 0, 2) === 0) {
 				$serviceAuthorization = substr($arg, 2);
-			} else
-			if (strlen($arg) >= 2 && substr_compare($arg, "v=", 0, 2) === 0) {
-				$voiceDetection = substr($arg, 2);
 			} else
 			if (strlen($arg) >= 2 && substr_compare($arg, "-x", 0, 2) === 0) {
 				$proxyServerName = substr($arg, 2);
@@ -148,6 +138,9 @@ class WrpTester implements com\amivoice\wrp\WrpListener {
 			} else {
 				$audioFileNames[] = $arg;
 			}
+			if ($verbose) {
+				p("DEBUG: " . $arg);
+			}
 		}
 		if (count($audioFileNames) === 0) {
 			p("Usage: php WrpTester.php [<parameters/options>]");
@@ -155,18 +148,16 @@ class WrpTester implements com\amivoice\wrp\WrpListener {
 			p("                           <audioFileName>...");
 			p("Parameters:");
 			p("  g=<grammarFileNames>");
-			p("  m=<mode>");
 			p("  i=<profileId>");
 			p("  w=<profileWords>");
-			p("  ot=<segmenterType>");
 			p("  op=<segmenterProperties>");
+			p("  of=<keepFillerToken>");
 			p("  oi=<resultUpdatedInterval>");
 			p("  oe=<extension>");
 			p("  ou=<authorization>");
 			p("  c=<codec>");
 			p("  r=<resultType>");
 			p("  u=<serviceAuthorization>");
-			p("  v=<voiceDetection>");
 			p("Options:");
 			p("  -x<proxyServerName>         (default: -x)");
 			p("  -c<connectionTimeout>       (default: -c5000)");
@@ -216,18 +207,16 @@ class WrpTester implements com\amivoice\wrp\WrpListener {
 		$wrp->setConnectTimeout($connectTimeout);
 		$wrp->setReceiveTimeout($receiveTimeout);
 		$wrp->setGrammarFileNames($grammarFileNames);
-		$wrp->setMode($mode);
 		$wrp->setProfileId($profileId);
 		$wrp->setProfileWords($profileWords);
-		$wrp->setSegmenterType($segmenterType);
 		$wrp->setSegmenterProperties($segmenterProperties);
+		$wrp->setKeepFillerToken($keepFillerToken);
 		$wrp->setResultUpdatedInterval($resultUpdatedInterval);
 		$wrp->setExtension($extension);
 		$wrp->setAuthorization($authorization);
 		$wrp->setCodec($codec);
 		$wrp->setResultType($resultType);
 		$wrp->setServiceAuthorization($serviceAuthorization);
-		$wrp->setVoiceDetection($voiceDetection);
 
 		// WebSocket 音声認識サーバへの接続
 		if (!$wrp->connect()) {
@@ -286,6 +275,9 @@ class WrpTester implements com\amivoice\wrp\WrpListener {
 								$wrp->sleep($sleepTime);
 							} else {
 								// スリープ時間が計算されていない場合...
+								// 微小時間のスリープ
+								$wrp->sleep(1);
+
 								// 認識結果情報待機数が 1 以下になるまでスリープ
 								$maxSleepTime = 50000;
 								while ($wrp->getWaitingResults() > 1 && $maxSleepTime > 0) {
@@ -377,6 +369,10 @@ class WrpTester implements com\amivoice\wrp\WrpListener {
 		if ($text !== null) {
 			p("   -> " . $text);
 		}
+	}
+
+	public function eventNotified($eventId, $eventMessage) {
+		p($eventId . " " . $eventMessage);
 	}
 
 	public function TRACE($message) {

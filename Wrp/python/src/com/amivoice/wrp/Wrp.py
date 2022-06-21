@@ -18,7 +18,7 @@ except:
 		return quote(s, "UTF-8")
 
 class Wrp(object):
-	VERSION = "Wrp/1.0.01 Python/%d.%d.%d (%s)" % (sys.version_info[0], sys.version_info[1], sys.version_info[2], sys.platform)
+	VERSION = "Wrp/1.0.03 Python/%d.%d.%d (%s)" % (sys.version_info[0], sys.version_info[1], sys.version_info[2], sys.platform)
 
 	@staticmethod
 	def getVersion():
@@ -40,11 +40,10 @@ class Wrp(object):
 		self.connectTimeout_ = 0
 		self.receiveTimeout_ = 0
 		self.grammarFileNames_ = None
-		self.mode_ = None
 		self.profileId_ = None
 		self.profileWords_ = None
-		self.segmenterType_ = None
 		self.segmenterProperties_ = None
+		self.keepFillerToken_ = None
 		self.resultUpdatedInterval_ = None
 		self.extension_ = None
 		self.authorization_ = None
@@ -58,6 +57,11 @@ class Wrp(object):
 
 	def setServerURL(self, serverURL):
 		self.serverURL_ = u(serverURL)
+		if self.serverURL_ != None:
+			if self.serverURL_.startswith("http://"):
+				self.serverURL_ = "ws://" + self.serverURL_[7:]
+			elif self.serverURL_.startswith("https://"):
+				self.serverURL_ = "wss://" + self.serverURL_[8:]
 
 	def setProxyServerName(self, proxyServerName):
 		self.proxyServerName_ = proxyServerName
@@ -71,23 +75,17 @@ class Wrp(object):
 	def setGrammarFileNames(self, grammarFileNames):
 		self.grammarFileNames_ = u(grammarFileNames)
 
-	def setMode(self, mode):
-		self.mode_ = u(mode)
-
 	def setProfileId(self, profileId):
 		self.profileId_ = u(profileId)
 
 	def setProfileWords(self, profileWords):
 		self.profileWords_ = u(profileWords)
 
-	def setSegmenterType(self, segmenterType):
-		self.segmenterType_ = u(segmenterType)
-
 	def setSegmenterProperties(self, segmenterProperties):
 		self.segmenterProperties_ = u(segmenterProperties)
 
-	def setResultUpdatedInterval(self, resultUpdatedInterval):
-		self.resultUpdatedInterval_ = u(resultUpdatedInterval)
+	def setKeepFillerToken(self, keepFillerToken):
+		self.keepFillerToken_ = keepFillerToken
 
 	def setExtension(self, extension):
 		self.extension_ = u(extension)
@@ -102,16 +100,8 @@ class Wrp(object):
 		self.resultType_ = u(resultType)
 
 	def setServiceAuthorization(self, serviceAuthorization):
-		self.authorization_ = u(serviceAuthorization)
-
-	def setVoiceDetection(self, voiceDetection):
-		if voiceDetection != None:
-			self.segmenterType_ = "G4"
-			self.segmenterProperties_ = u(voiceDetection)
-			if len(voiceDetection) > 3 and voiceDetection[0] == 'G' \
-									   and voiceDetection[2] == ' ':
-				self.segmenterType_ = u(voiceDetection[:2])
-				self.segmenterProperties_ = u(voiceDetection[3:])
+		if serviceAuthorization != None:
+			self.authorization_ = u(serviceAuthorization)
 
 	def connect(self):
 		if self.isConnected_():
@@ -188,14 +178,6 @@ class Wrp(object):
 					command += '\001'
 			else:
 				command += " \001"
-			if self.mode_ != None:
-				command += " mode="
-				if self.mode_.find(' ') != -1:
-					command += '"'
-					command += self.mode_
-					command += '"'
-				else:
-					command += self.mode_
 			if self.profileId_ != None:
 				command += " profileId="
 				if self.profileId_.find(' ') != -1:
@@ -212,14 +194,6 @@ class Wrp(object):
 					command += '"'
 				else:
 					command += self.profileWords_
-			if self.segmenterType_ != None:
-				command += " segmenterType="
-				if self.segmenterType_.find(' ') != -1:
-					command += '"'
-					command += self.segmenterType_
-					command += '"'
-				else:
-					command += self.segmenterType_
 			if self.segmenterProperties_ != None:
 				command += " segmenterProperties="
 				if self.segmenterProperties_.find(' ') != -1:
@@ -228,6 +202,14 @@ class Wrp(object):
 					command += '"'
 				else:
 					command += self.segmenterProperties_
+			if self.keepFillerToken_ != None:
+				command += " keepFillerToken="
+				if self.keepFillerToken_.find(' ') != -1:
+					command += '"'
+					command += self.keepFillerToken_
+					command += '"'
+				else:
+					command += self.keepFillerToken_
 			if self.resultUpdatedInterval_ != None:
 				command += " resultUpdatedInterval="
 				if self.resultUpdatedInterval_.find(' ') != -1:
@@ -240,7 +222,7 @@ class Wrp(object):
 				command += " extension="
 				if self.extension_.find(' ') != -1:
 					command += '"'
-					command += self.extension_
+					command += self.extension_.replace("\"", "\"\"")
 					command += '"'
 				else:
 					command += self.extension_
@@ -430,3 +412,9 @@ class Wrp(object):
 			if self.listener_ != None:
 				self.listener_.resultFinalized("\001\001\001\001\001" + message[2:])
 			self.waitingResults_ -= 1
+		elif command == 'Q':
+			if self.listener_ != None:
+				self.listener_.eventNotified(command, message[2:])
+		elif command == 'G':
+			if self.listener_ != None:
+				self.listener_.eventNotified(command, message[2:])

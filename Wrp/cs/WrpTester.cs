@@ -6,17 +6,23 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 
+#if !UNITY_2018_4_OR_NEWER
 [assembly: AssemblyTitle("WrpTester")]
 [assembly: AssemblyProduct("WrpTester")]
-[assembly: AssemblyCopyright("Copyright (C) 2019 Advanced Media, Inc.")]
+[assembly: AssemblyCopyright("Copyright (C) 2019-2021 Advanced Media, Inc.")]
 [assembly: ComVisible(false)]
 [assembly: Guid("c7841911-a965-4734-9222-462422948eec")]
-[assembly: AssemblyVersion("1.0.01.0")]
-[assembly: AssemblyFileVersion("1.0.01.0")]
+[assembly: AssemblyVersion("1.0.03")]
+[assembly: AssemblyFileVersion("1.0.03")]
+#endif
 
 namespace WrpTester {
 
 public class WrpTester : com.amivoice.wrp.WrpListener {
+	#if UNITY_2018_4_OR_NEWER
+	public static PseudoConsole Console;
+	#endif
+
 	public static void Main(string[] args) {
 		// WebSocket 音声認識サーバ URL
 		string serverURL = null;
@@ -26,16 +32,14 @@ public class WrpTester : com.amivoice.wrp.WrpListener {
 		List<string> audioFileNames = new List<string>();
 		// グラマファイル名
 		string grammarFileNames = null;
-		// モード
-		string mode = null;
 		// プロファイル ID
 		string profileId = null;
 		// プロファイル登録単語
 		string profileWords = null;
-		// セグメンタタイプ
-		string segmenterType = null;
 		// セグメンタプロパティ
 		string segmenterProperties = null;
+		// フィラー単語を保持するかどうか
+		string keepFillerToken = null;
 		// 認識中イベント発行間隔
 		string resultUpdatedInterval = null;
 		// 拡張情報
@@ -48,8 +52,6 @@ public class WrpTester : com.amivoice.wrp.WrpListener {
 		string resultType = null;
 		// サービス認証キー文字列
 		string serviceAuthorization = null;
-		// 発話区間検出パラメータ文字列
-		string voiceDetection = null;
 		// 接続タイムアウト
 		int connectTimeout = 5000;
 		// 受信タイムアウト
@@ -68,20 +70,17 @@ public class WrpTester : com.amivoice.wrp.WrpListener {
 			if (arg.StartsWith("g=")) {
 				grammarFileNames = arg.Substring(2);
 			} else
-			if (arg.StartsWith("m=")) {
-				mode = arg.Substring(2);
-			} else
 			if (arg.StartsWith("i=")) {
 				profileId = arg.Substring(2);
 			} else
 			if (arg.StartsWith("w=")) {
 				profileWords = arg.Substring(2);
 			} else
-			if (arg.StartsWith("ot=")) {
-				segmenterType = arg.Substring(3);
-			} else
 			if (arg.StartsWith("op=")) {
 				segmenterProperties = arg.Substring(3);
+			} else
+			if (arg.StartsWith("of=")) {
+				keepFillerToken = arg.Substring(3);
 			} else
 			if (arg.StartsWith("oi=")) {
 				resultUpdatedInterval = arg.Substring(3);
@@ -100,9 +99,6 @@ public class WrpTester : com.amivoice.wrp.WrpListener {
 			} else
 			if (arg.StartsWith("u=")) {
 				serviceAuthorization = arg.Substring(2);
-			} else
-			if (arg.StartsWith("v=")) {
-				voiceDetection = arg.Substring(2);
 			} else
 			if (arg.StartsWith("-x")) {
 				proxyServerName = arg.Substring(2);
@@ -137,25 +133,26 @@ public class WrpTester : com.amivoice.wrp.WrpListener {
 			} else {
 				audioFileNames.Add(arg);
 			}
+			if (verbose) {
+				Console.WriteLine("DEBUG: " + arg);
+			}
 		}
 		if (audioFileNames.Count == 0) {
-			Console.WriteLine("Usage: WrpTester.exe [<parameters/options>]");
-			Console.WriteLine("                      <url>");
-			Console.WriteLine("                       <audioFileName>...");
+			Console.WriteLine("Usage: WrpTester [<parameters/options>]");
+			Console.WriteLine("                  <url>");
+			Console.WriteLine("                   <audioFileName>...");
 			Console.WriteLine("Parameters:");
 			Console.WriteLine("  g=<grammarFileNames>");
-			Console.WriteLine("  m=<mode>");
 			Console.WriteLine("  i=<profileId>");
 			Console.WriteLine("  w=<profileWords>");
-			Console.WriteLine("  ot=<segmenterType>");
 			Console.WriteLine("  op=<segmenterProperties>");
+			Console.WriteLine("  of=<keepFillerToken>");
 			Console.WriteLine("  oi=<resultUpdatedInterval>");
 			Console.WriteLine("  oe=<extension>");
 			Console.WriteLine("  ou=<authorization>");
 			Console.WriteLine("  c=<codec>");
 			Console.WriteLine("  r=<resultType>");
 			Console.WriteLine("  u=<serviceAuthorization>");
-			Console.WriteLine("  v=<voiceDetection>");
 			Console.WriteLine("Options:");
 			Console.WriteLine("  -x<proxyServerName>         (default: -x)");
 			Console.WriteLine("  -c<connectionTimeout>       (default: -c5000)");
@@ -205,18 +202,16 @@ public class WrpTester : com.amivoice.wrp.WrpListener {
 		wrp.setConnectTimeout(connectTimeout);
 		wrp.setReceiveTimeout(receiveTimeout);
 		wrp.setGrammarFileNames(grammarFileNames);
-		wrp.setMode(mode);
 		wrp.setProfileId(profileId);
 		wrp.setProfileWords(profileWords);
-		wrp.setSegmenterType(segmenterType);
 		wrp.setSegmenterProperties(segmenterProperties);
+		wrp.setKeepFillerToken(keepFillerToken);
 		wrp.setResultUpdatedInterval(resultUpdatedInterval);
 		wrp.setExtension(extension);
 		wrp.setAuthorization(authorization);
 		wrp.setCodec(codec);
 		wrp.setResultType(resultType);
 		wrp.setServiceAuthorization(serviceAuthorization);
-		wrp.setVoiceDetection(voiceDetection);
 
 		// WebSocket 音声認識サーバへの接続
 		if (!wrp.connect()) {
@@ -270,6 +265,9 @@ public class WrpTester : com.amivoice.wrp.WrpListener {
 									wrp.sleep(sleepTime);
 								} else {
 									// スリープ時間が計算されていない場合...
+									// 微小時間のスリープ
+									wrp.sleep(1);
+
 									// 認識結果情報待機数が 1 以下になるまでスリープ
 									int maxSleepTime = 50000;
 									while (wrp.getWaitingResults() > 1 && maxSleepTime > 0) {
@@ -356,6 +354,10 @@ public class WrpTester : com.amivoice.wrp.WrpListener {
 		if (text != null) {
 			Console.WriteLine("   -> " + text);
 		}
+	}
+
+	public void eventNotified(int eventId, string eventMessage) {
+		Console.WriteLine((char)eventId + " " + eventMessage);
 	}
 
 	public void TRACE(string message) {

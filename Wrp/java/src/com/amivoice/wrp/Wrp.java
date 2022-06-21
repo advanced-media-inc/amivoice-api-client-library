@@ -3,7 +3,7 @@ package com.amivoice.wrp;
 import java.io.*;
 
 public abstract class Wrp {
-	private static final String VERSION = "Wrp/1.0.01 Java/" + System.getProperty("java.version") + " (" + System.getProperty("os.name") + " " + System.getProperty("os.version") + ")";
+	private static final String VERSION = "Wrp/1.0.03 Java/" + System.getProperty("java.version") + " (" + System.getProperty("os.name") + " " + System.getProperty("os.version") + ")";
 
 	public static String getVersion() {
 		return VERSION;
@@ -42,6 +42,7 @@ public abstract class Wrp {
 	private String profileWords_;
 	private String segmenterType_;
 	private String segmenterProperties_;
+	private String keepFillerToken_;
 	private String resultUpdatedInterval_;
 	private String extension_;
 	private String authorization_;
@@ -63,6 +64,7 @@ public abstract class Wrp {
 		profileWords_ = null;
 		segmenterType_ = null;
 		segmenterProperties_ = null;
+		keepFillerToken_ = null;
 		resultUpdatedInterval_ = null;
 		extension_ = null;
 		authorization_ = null;
@@ -78,6 +80,14 @@ public abstract class Wrp {
 
 	public void setServerURL(String serverURL) {
 		serverURL_ = serverURL;
+		if (serverURL_ != null) {
+			if (serverURL_.startsWith("http://")) {
+				serverURL_ = "ws://" + serverURL_.substring(7);
+			} else
+			if (serverURL_.startsWith("https://")) {
+				serverURL_ = "wss://" + serverURL_.substring(8);
+			}
+		}
 	}
 
 	public void setProxyServerName(String proxyServerName) {
@@ -116,6 +126,10 @@ public abstract class Wrp {
 		segmenterProperties_ = segmenterProperties;
 	}
 
+	public void setKeepFillerToken(String keepFillerToken) {
+		keepFillerToken_ = keepFillerToken;
+	}
+
 	public void setResultUpdatedInterval(String resultUpdatedInterval) {
 		resultUpdatedInterval_ = resultUpdatedInterval;
 	}
@@ -137,7 +151,9 @@ public abstract class Wrp {
 	}
 
 	public void setServiceAuthorization(String serviceAuthorization) {
-		authorization_ = serviceAuthorization;
+		if (serviceAuthorization != null) {
+			authorization_ = serviceAuthorization;
+		}
 	}
 
 	public void setVoiceDetection(String voiceDetection) {
@@ -294,6 +310,16 @@ public abstract class Wrp {
 					command.append(segmenterProperties_);
 				}
 			}
+			if (keepFillerToken_ != null) {
+				command.append(" keepFillerToken=");
+				if (keepFillerToken_.indexOf(' ') != -1) {
+					command.append('"');
+					command.append(keepFillerToken_);
+					command.append('"');
+				} else {
+					command.append(keepFillerToken_);
+				}
+			}
 			if (resultUpdatedInterval_ != null) {
 				command.append(" resultUpdatedInterval=");
 				if (resultUpdatedInterval_.indexOf(' ') != -1) {
@@ -308,7 +334,7 @@ public abstract class Wrp {
 				command.append(" extension=");
 				if (extension_.indexOf(' ') != -1) {
 					command.append('"');
-					command.append(extension_);
+					command.append(extension_.replace("\"", "\"\""));
 					command.append('"');
 				} else {
 					command.append(extension_);
@@ -563,6 +589,16 @@ public abstract class Wrp {
 				listener_.resultFinalized("\001\001\001\001\001" + message.substring(2));
 			}
 			waitingResults_--;
+		} else
+		if (command == 'Q') {
+			if (listener_ != null) {
+				listener_.eventNotified((int)command, message.substring(2));
+			}
+		} else
+		if (command == 'G') {
+			if (listener_ != null) {
+				listener_.eventNotified((int)command, message.substring(2));
+			}
 		}
 	}
 }

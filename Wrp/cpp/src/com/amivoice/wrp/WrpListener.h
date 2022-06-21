@@ -11,6 +11,7 @@ class WrpListener {
 	public: virtual void resultCreated() = 0;
 	public: virtual void resultUpdated(const char* result) = 0;
 	public: virtual void resultFinalized(const char* result) = 0;
+	public: virtual void eventNotified(int eventId, const char* eventMessage) = 0;
 	public: virtual void TRACE(const char* message) = 0;
 };
 

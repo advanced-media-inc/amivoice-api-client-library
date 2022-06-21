@@ -77,6 +77,9 @@ class WrpSimpleTester implements com\amivoice\wrp\WrpListener {
 				// 音声データファイルからの音声データの読み込み
 				$audioData = @fread($audioStream, 4096);
 				while ($audioData !== false && strlen($audioData) > 0) {
+					// 微小時間のスリープ
+					$wrp->sleep(1);
+
 					// 認識結果情報待機数が 1 以下になるまでスリープ
 					$maxSleepTime = 50000;
 					while ($wrp->getWaitingResults() > 1 && $maxSleepTime > 0) {
@@ -142,6 +145,10 @@ class WrpSimpleTester implements com\amivoice\wrp\WrpListener {
 		if ($text !== null) {
 			p(" -> " . $text);
 		}
+	}
+
+	public function eventNotified($eventId, $eventMessage) {
+//		p($eventId . " " . $eventMessage);
 	}
 
 	public function TRACE($message) {

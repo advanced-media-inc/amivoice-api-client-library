@@ -44,6 +44,9 @@ public class WrpSimpleTester implements com.amivoice.wrp.WrpListener {
 				byte[] audioData = new byte[4096];
 				int audioDataReadBytes = audioStream.read(audioData, 0, audioData.length);
 				while (audioDataReadBytes > 0) {
+					// 微小時間のスリープ
+					wrp.sleep(1);
+
 					// 認識結果情報待機数が 1 以下になるまでスリープ
 					int maxSleepTime = 50000;
 					while (wrp.getWaitingResults() > 1 && maxSleepTime > 0) {
@@ -108,6 +111,11 @@ public class WrpSimpleTester implements com.amivoice.wrp.WrpListener {
 		if (text != null) {
 			System.out.println(" -> " + text);
 		}
+	}
+
+	@Override
+	public void eventNotified(int eventId, String eventMessage) {
+//		System.out.println((char)eventId + " " + eventMessage);
 	}
 
 	@Override

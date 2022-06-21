@@ -406,6 +406,9 @@ class WrpSimpleTester : private com::amivoice::wrp::WrpListener {
 				char audioData[4096];
 				int audioDataReadBytes = (int)fread(audioData, 1, 4096, audioStream);
 				while (audioDataReadBytes > 0) {
+					// 微小時間のスリープ
+					wrp->sleep(1);
+
 					// 認識結果情報待機数が 1 以下になるまでスリープ
 					int maxSleepTime = 50000;
 					while (wrp->getWaitingResults() > 1 && maxSleepTime > 0) {
@@ -469,6 +472,10 @@ class WrpSimpleTester : private com::amivoice::wrp::WrpListener {
 			print(" -> %s", String().fromUTF16(text).to());
 			delete[] text;
 		}
+	}
+
+	public: void eventNotified(int eventId, const char* eventMessage) override {
+//		print("%c %s", (char)eventId, String().fromUTF8(eventMessage).to());
 	}
 
 	public: void TRACE(const char* message) override {

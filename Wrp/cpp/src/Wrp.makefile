@@ -8,7 +8,8 @@ POCO_HOME = ../../../_/_poco
 
 SRC = \
 	com/amivoice/wrp/Wrp.cpp \
-	com/amivoice/wrp/Wrp_.cpp
+	com/amivoice/wrp/Wrp_.cpp \
+	com/amivoice/wrp/Wrp__.cpp
 
 LIB = \
 	-lPocoNet \

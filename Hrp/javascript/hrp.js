@@ -2,21 +2,19 @@ var Hrp = function() {
 	// public オブジェクト
 	var hrp_ = {
 		// public プロパティ
-		version: "Hrp/1.0.00",
+		version: "Hrp/1.0.04",
 		serverURL: "",
 		serverURLElement: undefined,
 		grammarFileNames: "",
 		grammarFileNamesElement: undefined,
-		mode: "",
-		modeElement: undefined,
 		profileId: "",
 		profileIdElement: undefined,
 		profileWords: "",
 		profileWordsElement: undefined,
-		segmenterType: "",
-		segmenterTypeElement: undefined,
 		segmenterProperties: "",
 		segmenterPropertiesElement: undefined,
+		keepFillerToken: "",
+		keepFillerTokenElement: undefined,
 		resultUpdatedInterval: "",
 		resultUpdatedIntervalElement: undefined,
 		extension: "",
@@ -143,7 +141,7 @@ var Hrp = function() {
 	// 音声データの供給の停止
 	function feedDataPause_(reason, waveFile) {
 		if (state_ !== 2) {
-			if (hrp_.TRACE) grp_.TRACE("ERROR: can't stop feeding data to HTTP server (Invalid state: " + state_ + ")");
+			if (hrp_.TRACE) hrp_.TRACE("ERROR: can't stop feeding data to HTTP server (Invalid state: " + state_ + ")");
 			return false;
 		}
 		if (hrp_.feedDataPauseStarted) hrp_.feedDataPauseStarted();
@@ -171,11 +169,10 @@ var Hrp = function() {
 		}
 		if (hrp_.serverURLElement) hrp_.serverURL = hrp_.serverURLElement.value;
 		if (hrp_.grammarFileNamesElement) hrp_.grammarFileNames = hrp_.grammarFileNamesElement.value;
-		if (hrp_.modeElement) hrp_.mode = hrp_.modeElement.value;
 		if (hrp_.profileIdElement) hrp_.profileId = hrp_.profileIdElement.value;
 		if (hrp_.profileWordsElement) hrp_.profileWords = hrp_.profileWordsElement.value;
-		if (hrp_.segmenterTypeElement) hrp_.segmenterType = hrp_.segmenterTypeElement.value;
 		if (hrp_.segmenterPropertiesElement) hrp_.segmenterProperties = hrp_.segmenterPropertiesElement.value;
+		if (hrp_.keepFillerTokenElement) hrp_.keepFillerToken = hrp_.keepFillerTokenElement.value;
 		if (hrp_.resultUpdatedIntervalElement) hrp_.resultUpdatedInterval = hrp_.resultUpdatedIntervalElement.value;
 		if (hrp_.extensionElement) hrp_.extension = hrp_.extensionElement.value;
 		if (hrp_.authorizationElement) hrp_.authorization = hrp_.authorizationElement.value;
@@ -197,13 +194,6 @@ var Hrp = function() {
 			domainId += "grammarFileNames=";
 			domainId += encodeURIComponent(hrp_.grammarFileNames);
 		}
-		if (hrp_.mode) {
-			if (domainId.length > 0) {
-				domainId += ' ';
-			}
-			domainId += "mode=";
-			domainId += encodeURIComponent(hrp_.mode);
-		}
 		if (hrp_.profileId) {
 			if (domainId.length > 0) {
 				domainId += ' ';
@@ -218,19 +208,19 @@ var Hrp = function() {
 			domainId += "profileWords=";
 			domainId += encodeURIComponent(hrp_.profileWords);
 		}
-		if (hrp_.segmenterType) {
-			if (domainId.length > 0) {
-				domainId += ' ';
-			}
-			domainId += "segmenterType=";
-			domainId += encodeURIComponent(hrp_.segmenterType);
-		}
 		if (hrp_.segmenterProperties) {
 			if (domainId.length > 0) {
 				domainId += ' ';
 			}
 			domainId += "segmenterProperties=";
 			domainId += encodeURIComponent(hrp_.segmenterProperties);
+		}
+		if (hrp_.keepFillerToken) {
+			if (domainId.length > 0) {
+				domainId += ' ';
+			}
+			domainId += "keepFillerToken=";
+			domainId += encodeURIComponent(hrp_.keepFillerToken);
 		}
 		if (hrp_.resultUpdatedInterval) {
 			if (domainId.length > 0) {
@@ -439,8 +429,8 @@ var Hrp = function() {
 		hrp_.version += " " + recorder_.version;
 	}
 	hrp_.serverURL = window.location.protocol + "//" + window.location.host + window.location.pathname;
-	hrp_.serverURL = hrp_.serverURL.substring(0, hrp_.serverURL.lastIndexOf('/'));
-	if (hrp_.serverURL.indexOf("/tool", hrp_.serverURL.length - 5) !== -1) {
+	hrp_.serverURL = hrp_.serverURL.substring(0, hrp_.serverURL.lastIndexOf('/') + 1);
+	if (hrp_.serverURL.endsWith("/tool/")) {
 		hrp_.serverURL = hrp_.serverURL.substring(0, hrp_.serverURL.length - 5);
 	}
 	hrp_.serverURL += "/recognize";

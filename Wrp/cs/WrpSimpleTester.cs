@@ -5,20 +5,26 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 
+#if !UNITY_2018_4_OR_NEWER
 [assembly: AssemblyTitle("WrpSimpleTester")]
 [assembly: AssemblyProduct("WrpSimpleTester")]
-[assembly: AssemblyCopyright("Copyright (C) 2019 Advanced Media, Inc.")]
+[assembly: AssemblyCopyright("Copyright (C) 2019-2021 Advanced Media, Inc.")]
 [assembly: ComVisible(false)]
 [assembly: Guid("c7841911-a965-4734-9222-462422948eea")]
-[assembly: AssemblyVersion("1.0.01.0")]
-[assembly: AssemblyFileVersion("1.0.01.0")]
+[assembly: AssemblyVersion("1.0.03")]
+[assembly: AssemblyFileVersion("1.0.03")]
+#endif
 
 namespace WrpSimpleTester {
 
 public class WrpSimpleTester : com.amivoice.wrp.WrpListener {
+	#if UNITY_2018_4_OR_NEWER
+	public static PseudoConsole Console;
+	#endif
+
 	public static void Main(string[] args) {
 		if (args.Length < 4) {
-			Console.WriteLine("Usage: WrpSimpleTester.exe <url> <audioFileName> <codec> <grammarFileNames> [<authorization>]");
+			Console.WriteLine("Usage: WrpSimpleTester <url> <audioFileName> <codec> <grammarFileNames> [<authorization>]");
 			return;
 		}
 
@@ -60,6 +66,9 @@ public class WrpSimpleTester : com.amivoice.wrp.WrpListener {
 					byte[] audioData = new byte[4096];
 					int audioDataReadBytes = audioStream.Read(audioData, 0, audioData.Length);
 					while (audioDataReadBytes > 0) {
+						// 微小時間のスリープ
+						wrp.sleep(1);
+
 						// 認識結果情報待機数が 1 以下になるまでスリープ
 						int maxSleepTime = 50000;
 						while (wrp.getWaitingResults() > 1 && maxSleepTime > 0) {
@@ -120,6 +129,10 @@ public class WrpSimpleTester : com.amivoice.wrp.WrpListener {
 		if (text != null) {
 			Console.WriteLine(" -> " + text);
 		}
+	}
+
+	public void eventNotified(int eventId, string eventMessage) {
+//		Console.WriteLine((char)eventId + " " + eventMessage);
 	}
 
 	public void TRACE(string message) {

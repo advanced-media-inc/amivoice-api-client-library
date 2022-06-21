@@ -1,13 +1,14 @@
 #include <string>
 #include "Poco/Exception.h"
+#include "Poco/String.h"
 #include "Poco/SynchronizedObject.h"
 #include "Poco/Thread.h"
 #include "com/amivoice/wrp/Wrp.h"
 #include "com/amivoice/wrp/Wrp_.h"
+#include "com/amivoice/wrp/Wrp__.h"
 #include "com/amivoice/wrp/WrpListener.h"
 
 static const std::string NULL_STRING = "\x7F";
-static const std::string RESERVED_FRAGMENT = "";
 
 namespace com {
 namespace amivoice {
@@ -15,7 +16,7 @@ namespace wrp {
 
 #define __STRING(x) #x
 #define _STRING(x) __STRING(x)
-const char* Wrp::VERSION = "Wrp/1.0.01"
+const char* Wrp::VERSION = "Wrp/1.0.03"
 #ifdef _MSC_VER
 	" MSVC/" _STRING(_MSC_VER)
 #endif
@@ -46,6 +47,9 @@ const char* Wrp::getVersion() {
 Wrp* Wrp::construct(int implementation /* = 1 */) {
 	if (implementation == 1) {
 		return new Wrp_();
+	} else
+	if (implementation == 2) {
+		return new Wrp__();
 	} else {
 		char message[256];
 		std::sprintf(message, "Unknown implementation: %d", implementation);
@@ -60,11 +64,10 @@ Wrp::Wrp() {
 	connectTimeout_ = 0;
 	receiveTimeout_ = 0;
 	grammarFileNames_ = NULL_STRING;
-	mode_ = NULL_STRING;
 	profileId_ = NULL_STRING;
 	profileWords_ = NULL_STRING;
-	segmenterType_ = NULL_STRING;
 	segmenterProperties_ = NULL_STRING;
+	keepFillerToken_ = NULL_STRING;
 	resultUpdatedInterval_ = NULL_STRING;
 	extension_ = NULL_STRING;
 	authorization_ = NULL_STRING;
@@ -83,6 +86,14 @@ void Wrp::setListener(WrpListener* listener) {
 
 void Wrp::setServerURL(const char* serverURL) {
 	serverURL_ = (serverURL == NULL) ? NULL_STRING : serverURL;
+	if (serverURL_ != NULL_STRING) {
+		if (serverURL_.length() - 7 >= 0 && serverURL_.compare(0, 7, "http://") == 0) {
+			serverURL_ = "ws://" + serverURL_.substr(7);
+		} else
+		if (serverURL_.length() - 8 >= 0 && serverURL_.compare(0, 8, "https://") == 0) {
+			serverURL_ = "wss://" + serverURL_.substr(8);
+		}
+	}
 }
 
 void Wrp::setProxyServerName(const char* proxyServerName) {
@@ -101,10 +112,6 @@ void Wrp::setGrammarFileNames(const char* grammarFileNames) {
 	grammarFileNames_ = (grammarFileNames == NULL) ? NULL_STRING : grammarFileNames;
 }
 
-void Wrp::setMode(const char* mode) {
-	mode_ = (mode == NULL) ? NULL_STRING : mode;
-}
-
 void Wrp::setProfileId(const char* profileId) {
 	profileId_ = (profileId == NULL) ? NULL_STRING : profileId;
 }
@@ -113,12 +120,12 @@ void Wrp::setProfileWords(const char* profileWords) {
 	profileWords_ = (profileWords == NULL) ? NULL_STRING : profileWords;
 }
 
-void Wrp::setSegmenterType(const char* segmenterType) {
-	segmenterType_ = (segmenterType == NULL) ? NULL_STRING : segmenterType;
-}
-
 void Wrp::setSegmenterProperties(const char* segmenterProperties) {
 	segmenterProperties_ = (segmenterProperties == NULL) ? NULL_STRING : segmenterProperties;
+}
+
+void Wrp::setKeepFillerToken(const char* keepFillerToken) {
+	keepFillerToken_ = (keepFillerToken == NULL) ? NULL_STRING : keepFillerToken;
 }
 
 void Wrp::setResultUpdatedInterval(const char* resultUpdatedInterval) {
@@ -142,18 +149,8 @@ void Wrp::setResultType(const char* resultType) {
 }
 
 void Wrp::setServiceAuthorization(const char* serviceAuthorization) {
-	authorization_ = (serviceAuthorization == NULL) ? NULL_STRING : serviceAuthorization;
-}
-
-void Wrp::setVoiceDetection(const char* voiceDetection) {
-	if (voiceDetection != NULL) {
-		segmenterType_ = "G4";
-		segmenterProperties_ = voiceDetection;
-		if (strlen(voiceDetection) > 3 && voiceDetection[0] == 'G'
-									   && voiceDetection[2] == ' ') {
-			segmenterType_[1] = voiceDetection[1];
-			segmenterProperties_ = &voiceDetection[3];
-		}
+	if (serviceAuthorization != NULL) {
+		authorization_ = serviceAuthorization;
 	}
 }
 
@@ -244,16 +241,6 @@ bool Wrp::feedDataResume() {
 		} else {
 			command += " \001";
 		}
-		if (mode_ != NULL_STRING) {
-			command += " mode=";
-			if (mode_.find(' ') != std::string::npos) {
-				command += '"';
-				command += mode_;
-				command += '"';
-			} else {
-				command += mode_;
-			}
-		}
 		if (profileId_ != NULL_STRING) {
 			command += " profileId=";
 			if (profileId_.find(' ') != std::string::npos) {
@@ -274,16 +261,6 @@ bool Wrp::feedDataResume() {
 				command += profileWords_;
 			}
 		}
-		if (segmenterType_ != NULL_STRING) {
-			command += " segmenterType=";
-			if (segmenterType_.find(' ') != std::string::npos) {
-				command += '"';
-				command += segmenterType_;
-				command += '"';
-			} else {
-				command += segmenterType_;
-			}
-		}
 		if (segmenterProperties_ != NULL_STRING) {
 			command += " segmenterProperties=";
 			if (segmenterProperties_.find(' ') != std::string::npos) {
@@ -292,6 +269,16 @@ bool Wrp::feedDataResume() {
 				command += '"';
 			} else {
 				command += segmenterProperties_;
+			}
+		}
+		if (keepFillerToken_ != NULL_STRING) {
+			command += " keepFillerToken=";
+			if (keepFillerToken_.find(' ') != std::string::npos) {
+				command += '"';
+				command += keepFillerToken_;
+				command += '"';
+			} else {
+				command += keepFillerToken_;
 			}
 		}
 		if (resultUpdatedInterval_ != NULL_STRING) {
@@ -308,7 +295,7 @@ bool Wrp::feedDataResume() {
 			command += " extension=";
 			if (extension_.find(' ') != std::string::npos) {
 				command += '"';
-				command += extension_;
+				command += Poco::replace(extension_, "\"", "\"\"");
 				command += '"';
 			} else {
 				command += extension_;
@@ -337,7 +324,7 @@ bool Wrp::feedDataResume() {
 		try {
 			state_ = 1;
 			const char* data = command.c_str();
-			int dataLength = command.length();
+			int dataLength = (int)command.length();
 			sendRequest_(data, 0, dataLength, (char)0);
 			while (state_ == 1) {
 				checkResponse_(-1);
@@ -557,6 +544,16 @@ void Wrp::onMessage_(const std::string& message) {
 			listener_->resultFinalized(("\001\001\001\001\001" + message.substr(2)).c_str());
 		}
 		waitingResults_--;
+	} else
+	if (command == 'Q') {
+		if (listener_ != NULL) {
+			listener_->eventNotified((int)command, message.c_str() + 2);
+		}
+	} else
+	if (command == 'G') {
+		if (listener_ != NULL) {
+			listener_->eventNotified((int)command, message.c_str() + 2);
+		}
 	}
 }
 
