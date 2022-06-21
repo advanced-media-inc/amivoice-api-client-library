@@ -1,0 +1,14 @@
+#!/bin/bash
+set -eu
+echo ""
+echo "==== libWrp.so"
+echo ""
+(cd src; make -f Wrp.makefile)
+echo ""
+echo "==== WrpSimpleTester"
+echo ""
+make -f WrpSimpleTester.makefile
+echo ""
+echo "==== WrpTester"
+echo ""
+make -f WrpTester.makefile
