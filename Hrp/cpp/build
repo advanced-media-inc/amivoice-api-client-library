@@ -1,0 +1,14 @@
+#!/bin/bash
+set -eu
+echo ""
+echo "==== libHrp.so"
+echo ""
+(cd src; make -f Hrp.makefile)
+echo ""
+echo "==== HrpSimpleTester"
+echo ""
+make -f HrpSimpleTester.makefile
+echo ""
+echo "==== HrpTester"
+echo ""
+make -f HrpTester.makefile
