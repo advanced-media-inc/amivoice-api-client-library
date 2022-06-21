@@ -17,7 +17,7 @@ var Recorder = function() {
 	// public オブジェクト
 	var recorder_ = {
 		// public プロパティ
-		version: "Recorder/1.0.01",
+		version: "Recorder/1.0.02",
 		downSampling: false,
 		downSamplingElement: undefined,
 		maxRecordingTime: 60000,
@@ -173,6 +173,11 @@ var Recorder = function() {
 			}
 		};
 		audioProcessor_onaudioprocess_downSampling_ = function(event) {
+			// <!-- for Safari
+			if (state_ === 0) {
+				return;
+			}
+			// -->
 			var audioData = event.inputBuffer.getChannelData(0);
 			var audioDataIndex = 0;
 			while (temporaryAudioDataSamples_ < temporaryAudioData_.length) {
@@ -218,6 +223,11 @@ var Recorder = function() {
 			}
 		};
 		audioProcessor_onaudioprocess_downSampling_recorded_ = function(event) {
+			// <!-- for Safari
+			if (state_ === 0) {
+				return;
+			}
+			// -->
 			var audioData = event.inputBuffer.getChannelData(0);
 			var audioDataIndex = 0;
 			while (temporaryAudioDataSamples_ < temporaryAudioData_.length) {
