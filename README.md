@@ -1,10 +1,24 @@
-AmiVoice 音声認識APIのサンプルプログラム
-==========================================================================
+AmiVoice API クライアントライブラリ
+===================================
 
-AmiVoice APIのWebSocketやHTTP音声認識APIを簡単に利用するためのクライアントライブラリ`Hrp`や`Wrp`のサンプルプログラムです。AmiVoice APIを使って音声認識するには、[AmiVoice API マニュアル](https://docs.amivoice.com/amivoice-api/manual/)を参照してください。サンプルプログラムの実行方法は、マニュアル中の[クライアントライブラリ](https://docs.amivoice.com/amivoice-api/manual/client-library/)を参照してください。
+AmiVoice APIを利用して音声認識アプリケーションを開発するためのクライアントライブラリ`Hrp`や`Wrp`と、そのサンプルプログラムを提供しています。
 
-## プログラミング言語
-このリポジトリには以下のプログラミング言語のクライアントライブラリとサンプルプログラムが含まれています。
+## クライアントライブラリについて
+AmiVoice APIで音声認識する際、主に2つのAPIがあります。
+
+- ストリーミング (WebSocket音声認識API)
+- 音声ファイル (HTTP音声認識API)
+
+それぞれのAPIを直接利用することもできますが、サーバとの通信をラップしてAmiVoice SDKのようなインタフェースで音声認識アプリケーションの開発ができます。
+
+WebSocket音声認識APIを使ったストリーミングは`Wrp`クラスライブラリ、音声ファイルを認識するためのHTTP音声認識APIのライブラリは`Hrp`クラスライブラリを利用します。
+
+
+>**Warning**
+> Hrpは同期HTTP音声認識APIのみに対応しています。非同期HTTP音声認識APIには対応していません。
+
+## 対応している言語
+以下のプログラミング言語に対応しています。
 
 - Java
 - Python
@@ -13,20 +27,14 @@ AmiVoice APIのWebSocketやHTTP音声認識APIを簡単に利用するための�
 - C++
 - Javascript
 
- Javascriptのサンプルは、Webブラウザから実行するアプリケーションですが、その他のサンプルはすべてコンソールから実行するアプリケーションです。
+サンプルプログラムは、JavascriptのみWebブラウザから実行するアプリケーションです。その他の言語にはコンソールから実行するアプリケーションが付属しています。
 
-## AmiVoice APIについて
-音声を送信する方法によって２つのAPIがあります。
-- ストリーミング (WebSocket音声認識API)
-- 音声ファイル (HTTP音声認識API)
-
-ストリーミングのサンプルはWrpディレクトリ、音声ファイルのサンプルはHrpディレクトリを参照してください。
-
-## その他
+## リソース
 サービスの詳細や開発者向けのドキュメントは以下を参照ください。
 
 - [AmiVoice Cloud Platform 公式サイト](https://acp.amivoice.com/main/)
-- [AmiVoice API マニュアル](https://docs.amivoice.com/)
+- [AmiVoice API マニュアル](https://docs.amivoice.com/amivoice-api/manual/)
+  - [クライアントライブラリ](https://docs.amivoice.com/amivoice-api/manual/client-library/) (最新版のクライアントライブラリとサンプルプログラムのビルド済みバイナリも提供しています。)
 
 サンプルプログラムの動作確認済みの環境、注意事項、利用しているオープンソースのライブラリについては以下を参照ください。
 - [サンプルプログラムの補足](readme.txt)
