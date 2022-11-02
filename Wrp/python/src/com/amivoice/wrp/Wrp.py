@@ -84,6 +84,9 @@ class Wrp(object):
 	def setSegmenterProperties(self, segmenterProperties):
 		self.segmenterProperties_ = u(segmenterProperties)
 
+	def setResultUpdatedInterval(self, resultUpdatedInterval):
+		self.resultUpdatedInterval_ = u(resultUpdatedInterval)
+
 	def setKeepFillerToken(self, keepFillerToken):
 		self.keepFillerToken_ = keepFillerToken
 
