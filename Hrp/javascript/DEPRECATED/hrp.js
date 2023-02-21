@@ -2,7 +2,7 @@ var Hrp = function() {
 	// public オブジェクト
 	var hrp_ = {
 		// public プロパティ
-		version: "Hrp/1.0.05",
+		version: "Hrp/1.0.04",
 		serverURL: "",
 		serverURLElement: undefined,
 		grammarFileNames: "",
@@ -70,7 +70,7 @@ var Hrp = function() {
 		recorder_.downSampling = true;
 
 		// 録音の開始処理が完了した時に呼び出されます。
-		recorder_.resumeEnded = function(codec) {
+		recorder_.resumeEnded = function(samplesPerSec) {
 			if (state_ === 1) {
 				state_ = 2;
 				if (hrp_.feedDataResumeEnded) hrp_.feedDataResumeEnded();

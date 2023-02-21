@@ -17,18 +17,15 @@ var Recorder = function() {
 	// public オブジェクト
 	var recorder_ = {
 		// public プロパティ
-		version: "Recorder/1.0.06",
-		maxRecordingTime: 60000,
-		maxRecordingTimeElement: undefined,
+		version: "Recorder/1.0.04",
 		downSampling: false,
 		downSamplingElement: undefined,
-		adpcmPacking: false,
-		adpcmPackinglement: undefined,
+		maxRecordingTime: 60000,
+		maxRecordingTimeElement: undefined,
 		// public メソッド
 		resume: resume_,
 		pause: pause_,
-		isActive: isActive_,
-		pack: pack_,
+		isActive: isActive,
 		// イベントハンドラ
 		resumeStarted: undefined,
 		resumeEnded: undefined,
@@ -113,36 +110,16 @@ var Recorder = function() {
 	var maxRecordingTimeTimerId_;
 
 	// 各種変数の初期化
-	async function initialize_() {
+	function initialize_() {
 		// 録音関係の各種変数の初期化
 		audioContext_ = new AudioContext();
-		await audioContext_.audioWorklet.addModule(URL.createObjectURL(new Blob([
-			"registerProcessor('audioWorkletProcessor', class extends AudioWorkletProcessor {",
-			"  constructor() {",
-			"    super()",
-			"  }",
-			"  process(inputs, outputs, parameters) {",
-			"    if (inputs.length > 0 && inputs[0].length > 0) {",
-			"      if (inputs[0].length === 2) {",
-			"        for (var j = 0; j < inputs[0][0].length; j++) {",
-			"          inputs[0][0][j] = (inputs[0][0][j] + inputs[0][1][j]) / 2",
-			"        }",
-			"      }",
-			"      this.port.postMessage(inputs[0][0], [inputs[0][0].buffer])",
-			"    }",
-			"    return true",
-			"  }",
-			"})"
-		], {type: 'application/javascript'})));
-		audioProcessor_ = new AudioWorkletNode(audioContext_, 'audioWorkletProcessor');
-		audioProcessor_.bufferSize = 128;
+		if (audioContext_.createScriptProcessor) {
+			audioProcessor_ = audioContext_.createScriptProcessor(0, 1, 1);
+		} else {
+			audioProcessor_ = audioContext_.createJavaScriptNode(0, 1, 1);
+		}
 		audioProcessor_onaudioprocess_ = function(event) {
-			// <!-- for AudioWorklet
-			if (state_ === 0) {
-				return;
-			}
-			// -->
-			var audioData = event.data;
+			var audioData = event.inputBuffer.getChannelData(0);
 			var pcmData = new Uint8Array(audioData.length * 2);
 			var pcmDataIndex = 0;
 			for (var audioDataIndex = 0; audioDataIndex < audioData.length; audioDataIndex++) {
@@ -169,14 +146,8 @@ var Recorder = function() {
 			}
 		};
 		audioProcessor_onaudioprocess_recorded_ = function(event) {
-			// <!-- for AudioWorklet
-			if (state_ === 0) {
-				return;
-			}
-			// -->
-			var audioData = event.data;
-			var pcmDataOffset = (ima_state_ > 0) ? 1 + 16 : 1;
-			var pcmDataIndex = pcmDataOffset;
+			var audioData = event.inputBuffer.getChannelData(0);
+			var pcmDataIndex = 1;
 			for (var audioDataIndex = 0; audioDataIndex < audioData.length; audioDataIndex++) {
 				var pcm = audioData[audioDataIndex] * 32768 | 0; // 小数 (0.0～1.0) を 整数 (-32768～32767) に変換...
 				if (pcm > 32767) {
@@ -188,7 +159,7 @@ var Recorder = function() {
 				pcmData_[pcmDataIndex++] = (pcm >> 8) & 0xFF;
 				pcmData_[pcmDataIndex++] = (pcm     ) & 0xFF;
 			}
-			if (recorder_.recorded) recorder_.recorded(pcmData_.subarray(pcmDataOffset, pcmDataIndex));
+			if (recorder_.recorded) recorder_.recorded(pcmData_, 1, pcmDataIndex - 1);
 			if (state_ === 3) {
 				state_ = 4;
 				audioStream_.stopTracks();
@@ -200,12 +171,12 @@ var Recorder = function() {
 			}
 		};
 		audioProcessor_onaudioprocess_downSampling_ = function(event) {
-			// <!-- for Safari and AudioWorklet
+			// <!-- for Safari
 			if (state_ === 0) {
 				return;
 			}
 			// -->
-			var audioData = event.data;
+			var audioData = event.inputBuffer.getChannelData(0);
 			var audioDataIndex = 0;
 			while (temporaryAudioDataSamples_ < temporaryAudioData_.length) {
 				temporaryAudioData_[temporaryAudioDataSamples_++] = audioData[audioDataIndex++];
@@ -250,19 +221,18 @@ var Recorder = function() {
 			}
 		};
 		audioProcessor_onaudioprocess_downSampling_recorded_ = function(event) {
-			// <!-- for Safari and AudioWorklet
+			// <!-- for Safari
 			if (state_ === 0) {
 				return;
 			}
 			// -->
-			var audioData = event.data;
+			var audioData = event.inputBuffer.getChannelData(0);
 			var audioDataIndex = 0;
 			while (temporaryAudioDataSamples_ < temporaryAudioData_.length) {
 				temporaryAudioData_[temporaryAudioDataSamples_++] = audioData[audioDataIndex++];
 			}
 			while (temporaryAudioDataSamples_ == temporaryAudioData_.length) {
-				var pcmDataOffset = (ima_state_ > 0) ? 1 + 16 : 1;
-				var pcmDataIndex = pcmDataOffset;
+				var pcmDataIndex = 1;
 				for (var temporaryAudioDataIndex = audioDecimatationFactor_ - 1; temporaryAudioDataIndex + 20 < temporaryAudioData_.length; temporaryAudioDataIndex += audioDecimatationFactor_) {
 					var pcm_float = 0.0;
 					for (var i = 0; i <= 20; i++) {
@@ -278,7 +248,7 @@ var Recorder = function() {
 					pcmData_[pcmDataIndex++] = (pcm >> 8) & 0xFF;
 					pcmData_[pcmDataIndex++] = (pcm     ) & 0xFF;
 				}
-				if (recorder_.recorded) recorder_.recorded(pcmData_.subarray(pcmDataOffset, pcmDataIndex));
+				if (recorder_.recorded) recorder_.recorded(pcmData_, 1, pcmDataIndex - 1);
 				temporaryAudioDataSamples_ = 0;
 				var temporaryAudioDataIndex = temporaryAudioData_.length - 20;
 				while (temporaryAudioDataIndex < temporaryAudioData_.length) {
@@ -318,7 +288,7 @@ var Recorder = function() {
 			audioDecimatationFactor_ = 0;
 		}
 		if (audioDecimatationFactor_ > 1) {
-			temporaryAudioData_ = new Float32Array(20 + ((audioProcessor_.bufferSize / audioDecimatationFactor_ >> 1) << 1) * audioDecimatationFactor_);
+			temporaryAudioData_ = new Float32Array(20 + (audioProcessor_.bufferSize / audioDecimatationFactor_ | 0) * audioDecimatationFactor_);
 			temporaryAudioDataSamples_ = 0;
 			coefData_ = new Float32Array(10 + 1 + 10);
 			if (audioDecimatationFactor_ == 3) {
@@ -367,13 +337,13 @@ var Recorder = function() {
 				coefData_[20] =  6.91278819431317970157e-6;
 			}
 		}
-		pcmData_ = new Uint8Array(1 + 16 + ((audioProcessor_.bufferSize / audioDecimatationFactor_ >> 1) << 1) * 2);
+		pcmData_ = new Uint8Array(1 + (audioProcessor_.bufferSize / audioDecimatationFactor_ | 0) * 2);
 		reason_ = {code: 0, message: ""};
 		maxRecordingTimeTimerId_ = null;
 	}
 
 	// 録音の開始
-	async function resume_() {
+	function resume_() {
 		if (state_ !== -1 && state_ !== 0) {
 			if (recorder_.TRACE) recorder_.TRACE("ERROR: can't start recording (invalid state: " + state_ + ")");
 			return false;
@@ -391,12 +361,11 @@ var Recorder = function() {
 		}
 		if (state_ === -1) {
 			// 各種変数の初期化
-			await initialize_();
+			initialize_();
 			state_ = 0;
 		}
-		if (recorder_.maxRecordingTimeElement) recorder_.maxRecordingTime = recorder_.maxRecordingTimeElement.value;
 		if (recorder_.downSamplingElement) recorder_.downSampling = recorder_.downSamplingElement.checked;
-		if (recorder_.adpcmPackingElement) recorder_.adpcmPacking = recorder_.adpcmPackingElement.checked;
+		if (recorder_.maxRecordingTimeElement) recorder_.maxRecordingTime = recorder_.maxRecordingTimeElement.value;
 		if (recorder_.downSampling) {
 			if (audioContext_.sampleRate === 48000) {
 				audioSamplesPerSec_ = 16000;
@@ -446,15 +415,15 @@ var Recorder = function() {
 		reason_.message = "";
 		if (audioDecimatationFactor_ > 1) {
 			if (recorder_.recorded) {
-				audioProcessor_.port.onmessage = audioProcessor_onaudioprocess_downSampling_recorded_;
+				audioProcessor_.onaudioprocess = audioProcessor_onaudioprocess_downSampling_recorded_;
 			} else {
-				audioProcessor_.port.onmessage = audioProcessor_onaudioprocess_downSampling_;
+				audioProcessor_.onaudioprocess = audioProcessor_onaudioprocess_downSampling_;
 			}
 		} else {
 			if (recorder_.recorded) {
-				audioProcessor_.port.onmessage = audioProcessor_onaudioprocess_recorded_;
+				audioProcessor_.onaudioprocess = audioProcessor_onaudioprocess_recorded_;
 			} else {
-				audioProcessor_.port.onmessage = audioProcessor_onaudioprocess_;
+				audioProcessor_.onaudioprocess = audioProcessor_onaudioprocess_;
 			}
 		}
 		navigator.mediaDevices.getUserMedia(
@@ -523,12 +492,7 @@ var Recorder = function() {
 					if (recorder_.TRACE) recorder_.TRACE("INFO: started recording: " + audioSamplesPerSec_ + "Hz (" + audioProcessor_.bufferSize + " samples/buffer)");
 				}
 				startMaxRecordingTimeTimer_();
-				// <!-- for ADPCM packing
-				ima_state_ = (recorder_.adpcmPacking) ? 1 : 0;
-				ima_state_last_ = 0;
-				ima_state_step_index_ = 0;
-				// -->
-				if (recorder_.resumeEnded) recorder_.resumeEnded(((ima_state_ > 0) ? "" : "MSB") + (audioSamplesPerSec_ / 1000 | 0) + "K");
+				if (recorder_.resumeEnded) recorder_.resumeEnded(audioSamplesPerSec_);
 			}
 		).catch(
 			function(error) {
@@ -555,7 +519,7 @@ var Recorder = function() {
 	}
 
 	// 録音中かどうかの取得
-	function isActive_() {
+	function isActive() {
 		return (state_ === 2);
 	}
 
@@ -584,111 +548,6 @@ var Recorder = function() {
 		reason_.code = 1;
 		reason_.message = "Exceeded max recording time";
 		pause_();
-	}
-
-	// <!-- for ADPCM packing
-	var ima_step_size_table_ = [
-		7, 8, 9, 10, 11, 12, 13, 14, 16, 17,
-		19, 21, 23, 25, 28, 31, 34, 37, 41, 45,
-		50, 55, 60, 66, 73, 80, 88, 97, 107, 118,
-		130, 143, 157, 173, 190, 209, 230, 253, 279, 307,
-		337, 371, 408, 449, 494, 544, 598, 658, 724, 796,
-		876, 963, 1060, 1166, 1282, 1411, 1552, 1707, 1878, 2066,
-		2272, 2499, 2749, 3024, 3327, 3660, 4026, 4428, 4871, 5358,
-		5894, 6484, 7132, 7845, 8630, 9493, 10442, 11487, 12635, 13899,
-		15289, 16818, 18500, 20350, 22385, 24623, 27086, 29794, 32767
-	];
-	var ima_step_adjust_table_ = [
-		-1, -1, -1, -1, 2, 4, 6, 8
-	]
-	var ima_state_;
-	var ima_state_last_;
-	var ima_state_step_index_;
-	function linear2ima_(pcm) {
-		var step_size = ima_step_size_table_[ima_state_step_index_];
-		var diff = pcm - ima_state_last_;
-		var ima = 0x00;
-		if (diff < 0) {
-			ima = 0x08;
-			diff = -diff;
-		}
-		var vpdiff = 0;
-		if (diff >= step_size) {
-			ima |= 0x04;
-			diff -= step_size;
-			vpdiff += step_size;
-		}
-		step_size >>= 1;
-		if (diff >= step_size) {
-			ima |= 0x02;
-			diff -= step_size;
-			vpdiff += step_size;
-		}
-		step_size >>= 1;
-		if (diff >= step_size) {
-			ima |= 0x01;
-			vpdiff += step_size;
-		}
-		step_size >>= 1;
-		vpdiff += step_size;
-		if ((ima & 0x08) != 0) {
-			ima_state_last_ -= vpdiff;
-		} else {
-			ima_state_last_ += vpdiff;
-		}
-		if (ima_state_last_ > 32767) {
-			ima_state_last_ = 32767;
-		} else
-		if (ima_state_last_ < -32768) {
-			ima_state_last_ = -32768;
-		}
-		ima_state_step_index_ += ima_step_adjust_table_[ima & 0x07];
-		if (ima_state_step_index_ < 0) {
-			ima_state_step_index_ = 0;
-		} else
-		if (ima_state_step_index_ > 88) {
-			ima_state_step_index_ = 88;
-		}
-		return ima;
-	}
-	// -->
-
-	// PCM 音声データの ADPCM 音声データへの変換
-	function pack_(data) {
-		if (ima_state_ > 0) {
-			var oldData = new DataView(data.buffer, data.byteOffset, data.byteLength);
-			var dataIndex = 0;
-			if (ima_state_ === 1) {
-				data = new Uint8Array(data.buffer, data.byteOffset - 16, 16 + data.length / 4);
-				data[dataIndex++] = 0x23; // '#'
-				data[dataIndex++] = 0x21; // '!'
-				data[dataIndex++] = 0x41; // 'A'
-				data[dataIndex++] = 0x44; // 'D'
-				data[dataIndex++] = 0x50; // 'P'
-				data[dataIndex++] = 0x0A; // '\n'
-				data[dataIndex++] = audioSamplesPerSec_ & 0xFF;
-				data[dataIndex++] = (audioSamplesPerSec_ >> 8) & 0xFF;
-				data[dataIndex++] = 1;
-				data[dataIndex++] = 2;
-				data[dataIndex++] = 0;
-				data[dataIndex++] = 0;
-				data[dataIndex++] = 1;
-				data[dataIndex++] = 2;
-				data[dataIndex++] = 0;
-				data[dataIndex++] = 0;
-				ima_state_ = 2;
-			} else {
-				data = new Uint8Array(data.buffer, data.byteOffset - 16, data.length / 4);
-			}
-			for (var i = 0; i < oldData.byteLength; i += 4) {
-				var pcm1 = oldData.getInt16(i    , false);
-				var pcm2 = oldData.getInt16(i + 2, false);
-				var ima1 = linear2ima_(pcm1);
-				var ima2 = linear2ima_(pcm2);
-				data[dataIndex++] = (ima1 << 4) | ima2;
-			}
-		}
-		return data;
 	}
 
 	// public オブジェクトの返却
