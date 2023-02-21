@@ -2,7 +2,7 @@ var Wrp = function() {
 	// public オブジェクト
 	var wrp_ = {
 		// public プロパティ
-		version: "Wrp/1.0.05",
+		version: "Wrp/1.0.04",
 		serverURL: "",
 		serverURLElement: undefined,
 		grammarFileNames: "",
@@ -157,11 +157,10 @@ var Wrp = function() {
 	if (recorder_) {
 		// 録音ライブラリのプロパティの設定
 		recorder_.downSampling = true;
-		recorder_.adpcmPacking = false;
 
 		// 録音の開始処理が完了した時に呼び出されます。
-		recorder_.resumeEnded = function(codec) {
-			wrp_.codec = codec;
+		recorder_.resumeEnded = function(samplesPerSec) {
+			wrp_.codec = "MSB" + (samplesPerSec / 1000 | 0) + "K";
 			if (wrp_.codecElement) wrp_.codecElement.value = wrp_.codec;
 			if (state_ == 0) {
 				connect_();
@@ -228,10 +227,9 @@ var Wrp = function() {
 		};
 
 		// 音声データが録音された時に呼び出されます。
-		recorder_.recorded = function(data) {
+		recorder_.recorded = function(data, offset, length) {
 			if (state_ === 5) {
-				data = recorder_.pack(data);
-				feedData__(data);
+				feedData__(data, offset, length);
 			}
 		};
 	}
@@ -622,7 +620,7 @@ var Wrp = function() {
 		feedDataResume__();
 		return true;
 	}
-	function feedDataResume__() {
+	function feedDataResume__(samplesPerSec) {
 		if (wrp_.grammarFileNamesElement) wrp_.grammarFileNames = wrp_.grammarFileNamesElement.value;
 		if (wrp_.profileIdElement) wrp_.profileId = wrp_.profileIdElement.value;
 		if (wrp_.profileWordsElement) wrp_.profileWords = wrp_.profileWordsElement.value;
@@ -634,6 +632,10 @@ var Wrp = function() {
 		if (wrp_.codecElement) wrp_.codec = wrp_.codecElement.value;
 		if (wrp_.resultTypeElement) wrp_.resultType = wrp_.resultTypeElement.value;
 		if (wrp_.checkIntervalTimeElement) wrp_.checkIntervalTime = wrp_.checkIntervalTimeElement.value;
+		if (samplesPerSec) {
+			wrp_.codec = "MSB" + (samplesPerSec / 1000 | 0) + "K";
+			if (wrp_.codecElement) wrp_.codecElement.value = wrp_.codec;
+		}
 		var command = "s ";
 		if (wrp_.codec) {
 			command += wrp_.codec;
@@ -678,24 +680,25 @@ var Wrp = function() {
 	}
 
 	// 音声データの供給
-	function feedData_(data) {
+	function feedData_(data, offset, length) {
 		if (state_ !== 5) {
 			if (wrp_.TRACE) wrp_.TRACE("ERROR: can't feed data to WebSocket server (Invalid state: " + state_ + ")");
 			return false;
 		}
-		feedData__(data);
+		feedData__(data, offset, length);
 		return true;
 	}
-	function feedData__(data) {
-		if (data.byteOffset >= 1) {
-			data = new Uint8Array(data.buffer, data.byteOffset - 1, 1 + data.length);
+	function feedData__(data, offset, length) {
+		if (offset === 1 && data.length === length + 1) {
 			data[0] = 0x70; // 'p'
 			socket_.send(data);
 		} else {
-			var newData = new Uint8Array(1 + data.length);
-			newData[0] = 0x70; // 'p'
-			newData.set(data, 1);
-			socket_.send(newData);
+			var outData = new Uint8Array(length + 1);
+			outData[0] = 0x70; // 'p'
+			for (var i = 0; i < length; i++) {
+				outData[1 + i] = data[offset + i];
+			}
+			socket_.send(outData);
 		}
 	}
 
