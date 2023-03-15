@@ -17,7 +17,9 @@ var Recorder = function() {
 	// public オブジェクト
 	var recorder_ = {
 		// public プロパティ
-		version: "Recorder/1.0.06",
+		version: "Recorder/1.0.08",
+		sampleRate: 16000,
+		sampleRateElement: undefined,
 		maxRecordingTime: 60000,
 		maxRecordingTimeElement: undefined,
 		downSampling: false,
@@ -115,7 +117,7 @@ var Recorder = function() {
 	// 各種変数の初期化
 	async function initialize_() {
 		// 録音関係の各種変数の初期化
-		audioContext_ = new AudioContext();
+		audioContext_ = new AudioContext({sampleRate: recorder_.sampleRate});
 		await audioContext_.audioWorklet.addModule(URL.createObjectURL(new Blob([
 			"registerProcessor('audioWorkletProcessor', class extends AudioWorkletProcessor {",
 			"  constructor() {",
@@ -313,6 +315,10 @@ var Recorder = function() {
 		if (audioContext_.sampleRate === 16000) {
 			audioSamplesPerSec_ = 16000;
 			audioDecimatationFactor_ = 1;
+		} else
+		if (audioContext_.sampleRate === 8000) {
+			audioSamplesPerSec_ = 8000;
+			audioDecimatationFactor_ = 1;
 		} else {
 			audioSamplesPerSec_ = 0;
 			audioDecimatationFactor_ = 0;
@@ -367,7 +373,7 @@ var Recorder = function() {
 				coefData_[20] =  6.91278819431317970157e-6;
 			}
 		}
-		pcmData_ = new Uint8Array(1 + 16 + ((audioProcessor_.bufferSize / audioDecimatationFactor_ >> 1) << 1) * 2);
+		pcmData_ = new Uint8Array(1 + 16 + audioProcessor_.bufferSize * 2);
 		reason_ = {code: 0, message: ""};
 		maxRecordingTimeTimerId_ = null;
 	}
@@ -389,14 +395,23 @@ var Recorder = function() {
 			if (recorder_.pauseEnded) recorder_.pauseEnded({code: 2, message: "Unsupported MediaDevices class"}, waveFile_);
 			return true;
 		}
+		if (recorder_.sampleRateElement) recorder_.sampleRate = recorder_.sampleRateElement.value - 0;
+		if (recorder_.maxRecordingTimeElement) recorder_.maxRecordingTime = recorder_.maxRecordingTimeElement.value - 0;
+		if (recorder_.downSamplingElement) recorder_.downSampling = recorder_.downSamplingElement.checked;
+		if (recorder_.adpcmPackingElement) recorder_.adpcmPacking = recorder_.adpcmPackingElement.checked;
+		if (state_ === 0 && recorder_.sampleRate !== audioSamplesPerSec_) {
+			audioStream_ = null;
+			audioProvider_ = null;
+			audioProcessor_ = null;
+			audioContext_.close();
+			audioContext_ = null;
+			state_ = -1;
+		}
 		if (state_ === -1) {
 			// 各種変数の初期化
 			await initialize_();
 			state_ = 0;
 		}
-		if (recorder_.maxRecordingTimeElement) recorder_.maxRecordingTime = recorder_.maxRecordingTimeElement.value;
-		if (recorder_.downSamplingElement) recorder_.downSampling = recorder_.downSamplingElement.checked;
-		if (recorder_.adpcmPackingElement) recorder_.adpcmPacking = recorder_.adpcmPackingElement.checked;
 		if (recorder_.downSampling) {
 			if (audioContext_.sampleRate === 48000) {
 				audioSamplesPerSec_ = 16000;
@@ -412,6 +427,10 @@ var Recorder = function() {
 			} else
 			if (audioContext_.sampleRate === 16000) {
 				audioSamplesPerSec_ = 16000;
+				audioDecimatationFactor_ = 1;
+			} else
+			if (audioContext_.sampleRate === 8000) {
+				audioSamplesPerSec_ = 8000;
 				audioDecimatationFactor_ = 1;
 			} else {
 				audioSamplesPerSec_ = 0;
@@ -458,7 +477,7 @@ var Recorder = function() {
 			}
 		}
 		navigator.mediaDevices.getUserMedia(
-			{audio: true, video: false}
+			{audio: {echoCancellation: false}, video: false}
 		).then(
 			function(audioStream) {
 				audioStream.stopTracks = function() {

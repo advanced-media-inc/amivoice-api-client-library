@@ -101,6 +101,7 @@ td {font-size: 14px; border: 1px solid #000;}
  <tr class="options" style="display:none;"><td>&nbsp;<font color="silver">認識結果文字エンコーディング</font></td><td><input type="text" class="text" id="resultEncoding" spellcheck="false" tabindex="3"></td></tr>
  <tr><td>&nbsp;APPKEY</td><td><input type="text" class="text" id="serviceAuthorization" spellcheck="false" tabindex="3"></td></tr>
  <tr class="options" style="display:none;"><td>&nbsp;発話区間検出パラメータ情報</td><td><input type="text" class="text" id="voiceDetection" spellcheck="false" tabindex="3"></td></tr>
+ <tr class="options" style="display:none;"><td>&nbsp;録音サンプリング周波数</td><td><input type="text" class="text" id="sampleRate" spellcheck="false" tabindex="3"></td></tr>
  <tr class="options" style="display:none;"><td>&nbsp;連続録音可能時間 (単位: ミリ秒)</td><td><input type="text" class="text" id="maxRecordingTime" spellcheck="false" tabindex="3"></td></tr>
  <tr class="options" style="display:none;"><td>&nbsp;ダウンサンプリング</td><td><input type="checkbox" class="checkbox" id="downSampling" tabindex="3"></td></tr>
  <tr><td>&nbsp;<font color="silver">(音声データ)</font></td><td><div id="audio" class="text" tabindex="4"></div></td></tr>
@@ -245,25 +246,6 @@ td {font-size: 14px; border: 1px solid #000;}
   var recognitionResultText = document.getElementsByClassName("recognitionResultText");
   var recognitionResultInfo = document.getElementsByClassName("recognitionResultInfo");
 
-  // 画面要素の初期化
-  issuerURL.value = "https://acp-api.amivoice.com/issue_service_authorization";
-  serverURL.value = "https://acp-api.amivoice.com/v1/recognize";
-  grammarFileNames[0].value = Hrp.grammarFileNames;
-  profileId.value = Hrp.profileId;
-  profileWords.value = Hrp.profileWords;
-  segmenterProperties.value = Hrp.segmenterProperties;
-  keepFillerToken.value = Hrp.keepFillerToken;
-  resultUpdatedInterval.value = Hrp.resultUpdatedInterval;
-  extension.value = Hrp.extension;
-  authorization.value = Hrp.authorization;
-  codec.value = Hrp.codec;
-  resultType.value = Hrp.resultType;
-  resultEncoding.value = Hrp.resultEncoding;
-  serviceAuthorization.value = Hrp.serviceAuthorization;
-  voiceDetection.value = Hrp.voiceDetection;
-  maxRecordingTime.value = Recorder.maxRecordingTime;
-  downSampling.checked = Recorder.downSampling;
-
   // 音声認識ライブラリのプロパティ要素の設定
   Hrp.serverURLElement = serverURL;
   Hrp.grammarFileNamesElement = grammarFileNames[0];
@@ -299,8 +281,29 @@ td {font-size: 14px; border: 1px solid #000;}
   Hrp.TRACE = TRACE;
 
   // 録音ライブラリのプロパティ要素の設定
+  Recorder.sampleRateElement = sampleRate;
   Recorder.maxRecordingTimeElement = maxRecordingTime;
   Recorder.downSamplingElement = downSampling;
+
+  // 画面要素の初期化
+  issuerURL.value = "https://acp-api.amivoice.com/issue_service_authorization";
+  serverURL.value = "https://acp-api.amivoice.com/v1/recognize";
+  grammarFileNames[0].value = Hrp.grammarFileNames;
+  profileId.value = Hrp.profileId;
+  profileWords.value = Hrp.profileWords;
+  segmenterProperties.value = Hrp.segmenterProperties;
+  keepFillerToken.value = Hrp.keepFillerToken;
+  resultUpdatedInterval.value = Hrp.resultUpdatedInterval;
+  extension.value = Hrp.extension;
+  authorization.value = Hrp.authorization;
+  codec.value = Hrp.codec;
+  resultType.value = Hrp.resultType;
+  resultEncoding.value = Hrp.resultEncoding;
+  serviceAuthorization.value = Hrp.serviceAuthorization;
+  voiceDetection.value = Hrp.voiceDetection;
+  sampleRate.value = Recorder.sampleRate;
+  maxRecordingTime.value = Recorder.maxRecordingTime;
+  downSampling.checked = Recorder.downSampling;
 
   // 音声認識ライブラリ／録音ライブラリのメソッドの画面要素への登録
   sendButton.onclick = function(e) {

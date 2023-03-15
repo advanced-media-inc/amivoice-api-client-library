@@ -2,7 +2,7 @@ var Wrp = function() {
 	// public オブジェクト
 	var wrp_ = {
 		// public プロパティ
-		version: "Wrp/1.0.05",
+		version: "Wrp/1.0.07",
 		serverURL: "",
 		serverURLElement: undefined,
 		grammarFileNames: "",
@@ -633,7 +633,7 @@ var Wrp = function() {
 		if (wrp_.authorizationElement) wrp_.authorization = wrp_.authorizationElement.value;
 		if (wrp_.codecElement) wrp_.codec = wrp_.codecElement.value;
 		if (wrp_.resultTypeElement) wrp_.resultType = wrp_.resultTypeElement.value;
-		if (wrp_.checkIntervalTimeElement) wrp_.checkIntervalTime = wrp_.checkIntervalTimeElement.value;
+		if (wrp_.checkIntervalTimeElement) wrp_.checkIntervalTime = wrp_.checkIntervalTimeElement.value - 0;
 		var command = "s ";
 		if (wrp_.codec) {
 			command += wrp_.codec;
