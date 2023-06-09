@@ -8,11 +8,11 @@ using System.Threading;
 #if !UNITY_2018_4_OR_NEWER
 [assembly: AssemblyTitle("Wrp")]
 [assembly: AssemblyProduct("Wrp")]
-[assembly: AssemblyCopyright("Copyright (C) 2019-2021 Advanced Media, Inc.")]
+[assembly: AssemblyCopyright("Copyright (C) 2019-2023 Advanced Media, Inc.")]
 [assembly: ComVisible(false)]
 [assembly: Guid("d605a501-80ec-4f48-a8fb-2a70e627a256")]
-[assembly: AssemblyVersion("1.0.03")]
-[assembly: AssemblyFileVersion("1.0.03")]
+[assembly: AssemblyVersion("1.0.05")]
+[assembly: AssemblyFileVersion("1.0.05")]
 #endif
 
 namespace com.amivoice.wrp {
@@ -445,7 +445,7 @@ public abstract class Wrp {
 
 	protected void onError_(Exception cause) {
 		lock (this) {
-			if (state_ == 0 || state_ == 5) {
+			if (state_ == 5) {
 				return;
 			}
 			lastMessage_ = "ERROR: caught exception (" + cause.Message + ")";
