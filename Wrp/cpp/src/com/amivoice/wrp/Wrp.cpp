@@ -16,7 +16,7 @@ namespace wrp {
 
 #define __STRING(x) #x
 #define _STRING(x) __STRING(x)
-const char* Wrp::VERSION = "Wrp/1.0.03"
+const char* Wrp::VERSION = "Wrp/1.0.05"
 #ifdef _MSC_VER
 	" MSVC/" _STRING(_MSC_VER)
 #endif
@@ -434,7 +434,7 @@ void Wrp::onClose_() {
 void Wrp::onError_(const std::string& cause) {
 	Poco::SynchronizedObject* synchronizedObject = synchronizedObject_();
 	/* synchronized (this) */ { Poco::ScopedLock<Poco::SynchronizedObject> synchronized(*synchronizedObject);
-		if (state_ == 0 || state_ == 5) {
+		if (state_ == 5) {
 			return;
 		}
 		lastMessage_ = "ERROR: caught exception (" + cause + ")";

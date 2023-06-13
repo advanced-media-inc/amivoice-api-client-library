@@ -18,7 +18,7 @@ except:
 		return quote(s, "UTF-8")
 
 class Hrp(object):
-	VERSION = "Hrp/1.0.03 Python/%d.%d.%d (%s)" % (sys.version_info[0], sys.version_info[1], sys.version_info[2], sys.platform)
+	VERSION = "Hrp/1.0.05 Python/%d.%d.%d (%s)" % (sys.version_info[0], sys.version_info[1], sys.version_info[2], sys.platform)
 
 	@staticmethod
 	def getVersion():
@@ -412,7 +412,7 @@ class Hrp(object):
 
 	def onError_(self, cause):
 		with self.condition_:
-			if self.state_ == 0 or self.state_ == 5:
+			if self.state_ == 5:
 				return
 			self.lastMessage_ = "ERROR: caught exception (" + u(str(cause)) + ")"
 			if self.listener_ != None:

@@ -17,7 +17,7 @@ namespace hrp {
 
 #define __STRING(x) #x
 #define _STRING(x) __STRING(x)
-const char* Hrp::VERSION = "Hrp/1.0.03"
+const char* Hrp::VERSION = "Hrp/1.0.05"
 #ifdef _MSC_VER
 	" MSVC/" _STRING(_MSC_VER)
 #endif
@@ -476,7 +476,7 @@ void Hrp::onClose_() {
 void Hrp::onError_(const std::string& cause) {
 	Poco::SynchronizedObject* synchronizedObject = synchronizedObject_();
 	/* synchronized (this) */ { Poco::ScopedLock<Poco::SynchronizedObject> synchronized(*synchronizedObject);
-		if (state_ == 0 || state_ == 5) {
+		if (state_ == 5) {
 			return;
 		}
 		lastMessage_ = "ERROR: caught exception (" + cause + ")";

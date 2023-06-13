@@ -4,7 +4,7 @@ import java.io.*;
 import java.net.URLEncoder;
 
 public abstract class Hrp {
-	private static final String VERSION = "Hrp/1.0.03 Java/" + System.getProperty("java.version") + " (" + System.getProperty("os.name") + " " + System.getProperty("os.version") + ")";
+	private static final String VERSION = "Hrp/1.0.05 Java/" + System.getProperty("java.version") + " (" + System.getProperty("os.name") + " " + System.getProperty("os.version") + ")";
 
 	public static String getVersion() {
 		return VERSION;
@@ -506,7 +506,7 @@ public abstract class Hrp {
 
 	protected void onError_(Throwable cause) {
 		synchronized (this) {
-			if (state_ == 0 || state_ == 5) {
+			if (state_ == 5) {
 				return;
 			}
 			lastMessage_ = "ERROR: caught exception (" + cause.getMessage() + ")";

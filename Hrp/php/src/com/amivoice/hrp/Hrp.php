@@ -10,7 +10,7 @@ abstract class Hrp {
 
 	public static function getVersion() {
 		if (self::$VERSION === null) {
-			self::$VERSION = "Hrp/1.0.03 PHP/" . phpversion() . " (" . php_uname('s') . " " . php_uname('r') . " " . php_uname('v') . ")";
+			self::$VERSION = "Hrp/1.0.05 PHP/" . phpversion() . " (" . php_uname('s') . " " . php_uname('r') . " " . php_uname('v') . ")";
 		}
 		return self::$VERSION;
 	}
@@ -468,7 +468,7 @@ abstract class Hrp {
 
 	protected function onError_($cause) {
 		/* synchronized ($this) */ {
-			if ($this->state_ === 0 || $this->state_ === 5) {
+			if ($this->state_ === 5) {
 				return;
 			}
 			$this->lastMessage_ = "ERROR: caught exception (" . $cause->getMessage() . ")";
