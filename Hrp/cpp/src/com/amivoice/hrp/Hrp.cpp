@@ -82,6 +82,7 @@ Hrp::Hrp() {
 	contentType_ = NULL_STRING;
 	accept_ = NULL_STRING;
 	state_ = 0;
+	lastMessage_ = "";
 }
 
 Hrp::~Hrp() {

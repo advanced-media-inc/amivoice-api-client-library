@@ -258,7 +258,6 @@ class Wrp_ : Wrp {
 			try {
 				tcpClient_.Close();
 			} catch (IOException) {}
-			tcpClient_ = null;
 		}
 		if (thread_ != null) {
 			try {
@@ -266,6 +265,7 @@ class Wrp_ : Wrp {
 			} catch (ThreadInterruptedException) {}
 			thread_ = null;
 		}
+		tcpClient_ = null;
 	}
 
 	protected override bool isConnected_() {

@@ -323,7 +323,6 @@ class Hrp_ extends Hrp implements Runnable {
 			try {
 				socket_.close();
 			} catch (IOException e) {}
-			socket_ = null;
 		}
 		if (thread_ != null) {
 			try {
@@ -331,6 +330,7 @@ class Hrp_ extends Hrp implements Runnable {
 			} catch (InterruptedException e) {}
 			thread_ = null;
 		}
+		socket_ = null;
 	}
 
 	@Override
