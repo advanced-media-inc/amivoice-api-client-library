@@ -50,6 +50,7 @@ class Wrp(object):
 		self.codec_ = None
 		self.resultType_ = None
 		self.state_ = 0
+		self.lastMessage_ = ""
 		self.waitingResults_ = 0
 
 	def setListener(self, listener):
@@ -191,17 +192,17 @@ class Wrp(object):
 					command += self.profileId_
 			if self.profileWords_ != None:
 				command += " profileWords="
-				if self.profileWords_.find(' ') != -1:
+				if self.profileWords_.find(' ') != -1 or self.profileWords_.find('\"') != -1:
 					command += '"'
-					command += self.profileWords_
+					command += self.profileWords_.replace("\"", "\"\"")
 					command += '"'
 				else:
 					command += self.profileWords_
 			if self.segmenterProperties_ != None:
 				command += " segmenterProperties="
-				if self.segmenterProperties_.find(' ') != -1:
+				if self.segmenterProperties_.find(' ') != -1 or self.segmenterProperties_.find('\"') != -1:
 					command += '"'
-					command += self.segmenterProperties_
+					command += self.segmenterProperties_.replace("\"", "\"\"")
 					command += '"'
 				else:
 					command += self.segmenterProperties_
@@ -223,7 +224,7 @@ class Wrp(object):
 					command += self.resultUpdatedInterval_
 			if self.extension_ != None:
 				command += " extension="
-				if self.extension_.find(' ') != -1:
+				if self.extension_.find(' ') != -1 or self.extension_.find('\"') != -1:
 					command += '"'
 					command += self.extension_.replace("\"", "\"\"")
 					command += '"'

@@ -18,7 +18,7 @@ using System.Threading;
 namespace com.amivoice.wrp {
 
 public abstract class Wrp {
-	private static string VERSION = "Wrp/1.0.03 CLR/" + System.Environment.Version.ToString() + " (" + System.Environment.OSVersion.ToString() + ")";
+	private static string VERSION = "Wrp/1.0.05 CLR/" + System.Environment.Version.ToString() + " (" + System.Environment.OSVersion.ToString() + ")";
 
 	public static string getVersion() {
 		return VERSION;
@@ -72,6 +72,7 @@ public abstract class Wrp {
 		codec_ = null;
 		resultType_ = null;
 		state_ = 0;
+		lastMessage_ = "";
 		waitingResults_ = 0;
 	}
 
@@ -253,9 +254,9 @@ public abstract class Wrp {
 			}
 			if (profileWords_ != null) {
 				command.Append(" profileWords=");
-				if (profileWords_.IndexOf(' ') != -1) {
+				if (profileWords_.IndexOf(' ') != -1 || profileWords_.IndexOf('\"') != -1) {
 					command.Append('"');
-					command.Append(profileWords_);
+					command.Append(profileWords_.Replace("\"", "\"\""));
 					command.Append('"');
 				} else {
 					command.Append(profileWords_);
@@ -263,9 +264,9 @@ public abstract class Wrp {
 			}
 			if (segmenterProperties_ != null) {
 				command.Append(" segmenterProperties=");
-				if (segmenterProperties_.IndexOf(' ') != -1) {
+				if (segmenterProperties_.IndexOf(' ') != -1 || segmenterProperties_.IndexOf('\"') != -1) {
 					command.Append('"');
-					command.Append(segmenterProperties_);
+					command.Append(segmenterProperties_.Replace("\"", "\"\""));
 					command.Append('"');
 				} else {
 					command.Append(segmenterProperties_);
@@ -293,7 +294,7 @@ public abstract class Wrp {
 			}
 			if (extension_ != null) {
 				command.Append(" extension=");
-				if (extension_.IndexOf(' ') != -1) {
+				if (extension_.IndexOf(' ') != -1 || extension_.IndexOf('\"') != -1) {
 					command.Append('"');
 					command.Append(extension_.Replace("\"", "\"\""));
 					command.Append('"');

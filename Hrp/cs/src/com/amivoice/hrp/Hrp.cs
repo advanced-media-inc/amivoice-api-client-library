@@ -86,6 +86,7 @@ public abstract class Hrp {
 		contentType_ = null;
 		accept_ = null;
 		state_ = 0;
+		lastMessage_ = "";
 	}
 
 	public void setListener(HrpListener listener) {

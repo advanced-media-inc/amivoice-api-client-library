@@ -71,6 +71,7 @@ public abstract class Wrp {
 		codec_ = null;
 		resultType_ = null;
 		state_ = 0;
+		lastMessage_ = "";
 		waitingResults_ = 0;
 	}
 
@@ -282,9 +283,9 @@ public abstract class Wrp {
 			}
 			if (profileWords_ != null) {
 				command.append(" profileWords=");
-				if (profileWords_.indexOf(' ') != -1) {
+				if (profileWords_.indexOf(' ') != -1 || profileWords_.indexOf('\"') != -1) {
 					command.append('"');
-					command.append(profileWords_);
+					command.append(profileWords_.replace("\"", "\"\""));
 					command.append('"');
 				} else {
 					command.append(profileWords_);
@@ -302,9 +303,9 @@ public abstract class Wrp {
 			}
 			if (segmenterProperties_ != null) {
 				command.append(" segmenterProperties=");
-				if (segmenterProperties_.indexOf(' ') != -1) {
+				if (segmenterProperties_.indexOf(' ') != -1 || segmenterProperties_.indexOf('\"') != -1) {
 					command.append('"');
-					command.append(segmenterProperties_);
+					command.append(segmenterProperties_.replace("\"", "\"\""));
 					command.append('"');
 				} else {
 					command.append(segmenterProperties_);
@@ -332,7 +333,7 @@ public abstract class Wrp {
 			}
 			if (extension_ != null) {
 				command.append(" extension=");
-				if (extension_.indexOf(' ') != -1) {
+				if (extension_.indexOf(' ') != -1 || extension_.indexOf('\"') != -1) {
 					command.append('"');
 					command.append(extension_.replace("\"", "\"\""));
 					command.append('"');

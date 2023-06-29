@@ -367,7 +367,6 @@ class Wrp_ extends Wrp implements Runnable {
 			try {
 				socket_.close();
 			} catch (IOException e) {}
-			socket_ = null;
 		}
 		if (thread_ != null) {
 			try {
@@ -375,6 +374,7 @@ class Wrp_ extends Wrp implements Runnable {
 			} catch (InterruptedException e) {}
 			thread_ = null;
 		}
+		socket_ = null;
 	}
 
 	@Override

@@ -74,6 +74,7 @@ Wrp::Wrp() {
 	codec_ = NULL_STRING;
 	resultType_ = NULL_STRING;
 	state_ = 0;
+	lastMessage_ = "";
 	waitingResults_ = 0;
 }
 
@@ -253,9 +254,9 @@ bool Wrp::feedDataResume() {
 		}
 		if (profileWords_ != NULL_STRING) {
 			command += " profileWords=";
-			if (profileWords_.find(' ') != std::string::npos) {
+			if (profileWords_.find(' ') != std::string::npos || profileWords_.find('\"') != std::string::npos) {
 				command += '"';
-				command += profileWords_;
+				command += Poco::replace(profileWords_, "\"", "\"\"");
 				command += '"';
 			} else {
 				command += profileWords_;
@@ -263,9 +264,9 @@ bool Wrp::feedDataResume() {
 		}
 		if (segmenterProperties_ != NULL_STRING) {
 			command += " segmenterProperties=";
-			if (segmenterProperties_.find(' ') != std::string::npos) {
+			if (segmenterProperties_.find(' ') != std::string::npos || segmenterProperties_.find('\"') != std::string::npos) {
 				command += '"';
-				command += segmenterProperties_;
+				command += Poco::replace(segmenterProperties_, "\"", "\"\"");
 				command += '"';
 			} else {
 				command += segmenterProperties_;
@@ -293,7 +294,7 @@ bool Wrp::feedDataResume() {
 		}
 		if (extension_ != NULL_STRING) {
 			command += " extension=";
-			if (extension_.find(' ') != std::string::npos) {
+			if (extension_.find(' ') != std::string::npos || extension_.find('\"') != std::string::npos) {
 				command += '"';
 				command += Poco::replace(extension_, "\"", "\"\"");
 				command += '"';

@@ -214,13 +214,13 @@ class Wrp_(Wrp):
 				self.socket_.close()
 			except:
 				pass
-			self.socket_ = None
 		if self.thread_ != None:
 			try:
 				self.thread_.join()
 			except:
 				pass
 			self.thread_ = None
+		self.socket_ = None
 
 	def isConnected_(self):
 		return (self.socket_ != None)

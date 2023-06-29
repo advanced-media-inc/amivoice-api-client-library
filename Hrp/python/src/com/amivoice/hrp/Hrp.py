@@ -59,6 +59,7 @@ class Hrp(object):
 		self.contentType_ = None
 		self.accept_ = None
 		self.state_ = 0
+		self.lastMessage_ = ""
 
 	def setListener(self, listener):
 		self.listener_ = listener

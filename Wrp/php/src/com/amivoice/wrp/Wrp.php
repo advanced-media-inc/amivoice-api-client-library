@@ -59,6 +59,7 @@ abstract class Wrp {
 		$this->codec_ = null;
 		$this->resultType_ = null;
 		$this->state_ = 0;
+		$this->lastMessage_ = "";
 		$this->waitingResults_ = 0;
 	}
 
@@ -240,9 +241,9 @@ abstract class Wrp {
 			}
 			if ($this->profileWords_ !== null) {
 				$command .= " profileWords=";
-				if (strpos($this->profileWords_, ' ') !== false) {
+				if (strpos($this->profileWords_, ' ') !== false || strpos($this->profileWords_, '\"') !== false) {
 					$command .= '"';
-					$command .= $this->profileWords_;
+					$command .= str_replace("\"", "\"\"", $this->profileWords_);
 					$command .= '"';
 				} else {
 					$command .= $this->profileWords_;
@@ -250,9 +251,9 @@ abstract class Wrp {
 			}
 			if ($this->segmenterProperties_ !== null) {
 				$command .= " segmenterProperties=";
-				if (strpos($this->segmenterProperties_, ' ') !== false) {
+				if (strpos($this->segmenterProperties_, ' ') !== false || strpos($this->segmenterProperties_, '\"') !== false) {
 					$command .= '"';
-					$command .= $this->segmenterProperties_;
+					$command .= str_replace("\"", "\"\"", $this->segmenterProperties_);
 					$command .= '"';
 				} else {
 					$command .= $this->segmenterProperties_;
@@ -280,7 +281,7 @@ abstract class Wrp {
 			}
 			if ($this->extension_ !== null) {
 				$command .= " extension=";
-				if (strpos($this->extension_, ' ') !== false) {
+				if (strpos($this->extension_, ' ') !== false || strpos($this->extension_, '\"') !== false) {
 					$command .= '"';
 					$command .= str_replace("\"", "\"\"", $this->extension_);
 					$command .= '"';

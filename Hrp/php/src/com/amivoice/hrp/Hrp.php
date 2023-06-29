@@ -72,6 +72,7 @@ abstract class Hrp {
 		$this->contentType_ = null;
 		$this->accept_ = null;
 		$this->state_ = 0;
+		$this->lastMessage_ = "";
 	}
 
 	public function setListener($listener) {
