@@ -399,7 +399,7 @@ var Recorder = function() {
 		if (recorder_.maxRecordingTimeElement) recorder_.maxRecordingTime = recorder_.maxRecordingTimeElement.value - 0;
 		if (recorder_.downSamplingElement) recorder_.downSampling = recorder_.downSamplingElement.checked;
 		if (recorder_.adpcmPackingElement) recorder_.adpcmPacking = recorder_.adpcmPackingElement.checked;
-		if (state_ === 0 && recorder_.sampleRate !== audioSamplesPerSec_) {
+		if (state_ === 0) {
 			audioStream_ = null;
 			audioProvider_ = null;
 			audioProcessor_ = null;
