@@ -14,7 +14,7 @@ AmiVoice APIで音声認識する際、主に2つのAPIがあります。
 WebSocket音声認識APIを使ったストリーミングは`Wrp`クラスライブラリ、音声ファイルを認識するためのHTTP音声認識APIのライブラリは`Hrp`クラスライブラリを利用します。
 
 
->**Warning**
+> [!WARNING]
 > Hrpは同期HTTP音声認識APIのみに対応しています。非同期HTTP音声認識APIには対応していません。
 
 ## 対応している言語
