@@ -307,17 +307,17 @@ class Wrp_ extends Wrp implements Runnable {
 		// Upgrade: websocket
 		// Connection: upgrade
 		// Sec-WebSocket-Key: ...
-		// 
+		//
 		// -----------------------------------------------------------
 		StringBuilder requestHeader = new StringBuilder();
 		requestHeader.append("GET ");
 		requestHeader.append(resource);
 		requestHeader.append(" HTTP/1.1\r\n");
-		requestHeader.append("User-Agent: ");
-		requestHeader.append(Wrp.getVersion());
-		requestHeader.append("\r\n");
 		requestHeader.append("Host: ");
 		requestHeader.append(host);
+		requestHeader.append("\r\n");
+		requestHeader.append("User-Agent: ");
+		requestHeader.append(Wrp.getVersion());
 		requestHeader.append("\r\n");
 		requestHeader.append("Upgrade: websocket\r\n");
 		requestHeader.append("Connection: upgrade\r\n");
@@ -342,7 +342,7 @@ class Wrp_ extends Wrp implements Runnable {
 		// Upgrade: websocket
 		// Connection: upgrade
 		// Sec-WebSocket-Accept: ...
-		// 
+		//
 		// -----------------------------------------------------------
 		int responseHeaderBytes = read_CRLFCRLF_();
 		if (responseHeaderBytes == -1) {
@@ -365,6 +365,10 @@ class Wrp_ extends Wrp implements Runnable {
 	protected void disconnect_() {
 		if (socket_ != null) {
 			try {
+				outData_[0] = (byte)0x88;
+				outData_[1] = (byte)0x00;
+				out_.write(outData_, 0, 2);
+				out_.flush();
 				socket_.close();
 			} catch (IOException e) {}
 		}
@@ -475,6 +479,7 @@ class Wrp_ extends Wrp implements Runnable {
 			}
 			throw new IOException("Unexpected end of stream");
 		}
+		int inDataType = (inData_[0] & 0x0F);
 		int inDataBytes = (inData_[1] & 0x7F);
 		shift_(2);
 		if (inDataBytes == 126) {
@@ -507,7 +512,14 @@ class Wrp_ extends Wrp implements Runnable {
 		if (!read_(inDataBytes)) {
 			throw new IOException("Unexpected end of stream");
 		}
-		result_(inDataBytes);
+		if (inDataType == 1) {
+			result_(inDataBytes);
+		} else
+		if (inDataType == 10) {
+			result_(/* inDataBytes */ 0); // set inDataBytes to 0 so that the data is not treated as a recognition result...
+		} else {
+			throw new IOException("Detected invalid frame data (data type " + inDataType + ")");
+		}
 		shift_(inDataBytes);
 		return true;
 	}

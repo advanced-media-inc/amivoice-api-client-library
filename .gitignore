@@ -327,6 +327,11 @@ paket-files/
 __pycache__/
 *.pyc
 
+# Java（手動ビルド時に生成される成果物）
+**/java/*.class
+**/java/*.jar
+**/java/jar/
+
 # Cake - Uncomment if you are using it
 # tools/**
 # !tools/packages.config

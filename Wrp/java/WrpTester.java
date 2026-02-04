@@ -21,6 +21,20 @@ public class WrpTester implements com.amivoice.wrp.WrpListener {
 		String keepFillerToken = null;
 		// 認識中イベント発行間隔
 		String resultUpdatedInterval = null;
+		// 最大認識処理時間
+		String maxDecodingTime = null;
+		// 最大応答時間
+		String maxResponseTime = null;
+		// 最大認識処理割合
+		String maxDecodingRate = null;
+		// 目標応答時間
+		String targetResponseTime = null;
+		// 目標認識処理割合
+		String targetDecodingRate = null;
+		// 発話検出タイムアウト
+		String noInputTimeout = null;
+		// 認識処理タイムアウト
+		String recognitionTimeout = null;
 		// 拡張情報
 		String extension = null;
 		// サービス認証キー文字列
@@ -31,6 +45,8 @@ public class WrpTester implements com.amivoice.wrp.WrpListener {
 		String resultType = null;
 		// サービス認証キー文字列
 		String serviceAuthorization = null;
+		// 発話区間検出パラメータ文字列
+		String voiceDetection = null;
 		// 接続タイムアウト
 		int connectTimeout = 5000;
 		// 受信タイムアウト
@@ -42,7 +58,7 @@ public class WrpTester implements com.amivoice.wrp.WrpListener {
 		// 詳細出力
 		boolean verbose = false;
 		// 実装タイプ
-		int implementation = 1;
+		int implementation = 0;
 
 		// 引数のチェック
 		for (String arg: args) {
@@ -64,6 +80,27 @@ public class WrpTester implements com.amivoice.wrp.WrpListener {
 			if (arg.startsWith("oi=")) {
 				resultUpdatedInterval = arg.substring(3);
 			} else
+			if (arg.startsWith("omdt=")) {
+				maxDecodingTime = arg.substring(5);
+			} else
+			if (arg.startsWith("omrt=")) {
+				maxResponseTime = arg.substring(5);
+			} else
+			if (arg.startsWith("omdr=")) {
+				maxDecodingRate = arg.substring(5);
+			} else
+			if (arg.startsWith("otrt=")) {
+				targetResponseTime = arg.substring(5);
+			} else
+			if (arg.startsWith("otdr=")) {
+				targetDecodingRate = arg.substring(5);
+			} else
+			if (arg.startsWith("on=")) {
+				noInputTimeout = arg.substring(3);
+			} else
+			if (arg.startsWith("oo=")) {
+				recognitionTimeout = arg.substring(3);
+			} else
 			if (arg.startsWith("oe=")) {
 				extension = arg.substring(3);
 			} else
@@ -78,6 +115,9 @@ public class WrpTester implements com.amivoice.wrp.WrpListener {
 			} else
 			if (arg.startsWith("u=")) {
 				serviceAuthorization = arg.substring(2);
+			} else
+			if (arg.startsWith("v=")) {
+				voiceDetection = arg.substring(2);
 			} else
 			if (arg.startsWith("-x")) {
 				proxyServerName = arg.substring(2);
@@ -100,6 +140,9 @@ public class WrpTester implements com.amivoice.wrp.WrpListener {
 			} else
 			if (arg.startsWith("-v")) {
 				verbose = true;
+			} else
+			if (arg.startsWith("-1")) {
+				implementation = 1;
 			} else
 			if (arg.startsWith("-2")) {
 				implementation = 2;
@@ -127,11 +170,19 @@ public class WrpTester implements com.amivoice.wrp.WrpListener {
 			System.out.println("  op=<segmenterProperties>");
 			System.out.println("  of=<keepFillerToken>");
 			System.out.println("  oi=<resultUpdatedInterval>");
+			System.out.println("  omdt=<maxDecodingTime>");
+			System.out.println("  omrt=<maxResponseTime>");
+			System.out.println("  omdr=<maxDecodingRate>");
+			System.out.println("  otrt=<targetResponseTime>");
+			System.out.println("  otdr=<targetDecodingRate>");
+			System.out.println("  on=<noInputTimeout>");
+			System.out.println("  oo=<recognitionTimeout>");
 			System.out.println("  oe=<extension>");
 			System.out.println("  ou=<authorization>");
 			System.out.println("  c=<codec>");
 			System.out.println("  r=<resultType>");
 			System.out.println("  u=<serviceAuthorization>");
+			System.out.println("  v=<voiceDetection>");
 			System.out.println("Options:");
 			System.out.println("  -x<proxyServerName>         (default: -x)");
 			System.out.println("  -c<connectionTimeout>       (default: -c5000)");
@@ -186,11 +237,19 @@ public class WrpTester implements com.amivoice.wrp.WrpListener {
 		wrp.setSegmenterProperties(segmenterProperties);
 		wrp.setKeepFillerToken(keepFillerToken);
 		wrp.setResultUpdatedInterval(resultUpdatedInterval);
+		wrp.setMaxDecodingTime(maxDecodingTime);
+		wrp.setMaxResponseTime(maxResponseTime);
+		wrp.setMaxDecodingRate(maxDecodingRate);
+		wrp.setTargetResponseTime(targetResponseTime);
+		wrp.setTargetDecodingRate(targetDecodingRate);
+		wrp.setNoInputTimeout(noInputTimeout);
+		wrp.setRecognitionTimeout(recognitionTimeout);
 		wrp.setExtension(extension);
 		wrp.setAuthorization(authorization);
 		wrp.setCodec(codec);
 		wrp.setResultType(resultType);
 		wrp.setServiceAuthorization(serviceAuthorization);
+		wrp.setVoiceDetection(voiceDetection);
 
 		// WebSocket 音声認識サーバへの接続
 		if (!wrp.connect()) {
