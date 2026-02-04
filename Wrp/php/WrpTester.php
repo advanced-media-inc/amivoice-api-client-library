@@ -47,6 +47,20 @@ class WrpTester implements com\amivoice\wrp\WrpListener {
 		$keepFillerToken = null;
 		// 認識中イベント発行間隔
 		$resultUpdatedInterval = null;
+		// 最大認識処理時間
+		$maxDecodingTime = null;
+		// 最大応答時間
+		$maxResponseTime = null;
+		// 最大認識処理割合
+		$maxDecodingRate = null;
+		// 目標応答時間
+		$targetResponseTime = null;
+		// 目標認識処理割合
+		$targetDecodingRate = null;
+		// 発話検出タイムアウト
+		$noInputTimeout = null;
+		// 認識処理タイムアウト
+		$recognitionTimeout = null;
 		// 拡張情報
 		$extension = null;
 		// サービス認証キー文字列
@@ -57,6 +71,8 @@ class WrpTester implements com\amivoice\wrp\WrpListener {
 		$resultType = null;
 		// サービス認証キー文字列
 		$serviceAuthorization = null;
+		// 発話区間検出パラメータ文字列
+		$voiceDetection = null;
 		// 接続タイムアウト
 		$connectTimeout = 5000;
 		// 受信タイムアウト
@@ -68,7 +84,7 @@ class WrpTester implements com\amivoice\wrp\WrpListener {
 		// 詳細出力
 		$verbose = false;
 		// 実装タイプ
-		$implementation = 1;
+		$implementation = 0;
 
 		// 引数のチェック
 		foreach ($args as $arg) {
@@ -90,6 +106,27 @@ class WrpTester implements com\amivoice\wrp\WrpListener {
 			if (strlen($arg) >= 3 && substr_compare($arg, "oi=", 0, 3) === 0) {
 				$resultUpdatedInterval = substr($arg, 3);
 			} else
+			if (strlen($arg) >= strlen("omdt=") && substr_compare($arg, "omdt=", 0, strlen("omdt=")) === 0) {
+				$maxDecodingTime = substr($arg, 5);
+			} else
+			if (strlen($arg) >= strlen("omrt=") && substr_compare($arg, "omrt=", 0, strlen("omrt=")) === 0) {
+				$maxResponseTime = substr($arg, 5);
+			} else
+			if (strlen($arg) >= strlen("omdr=") && substr_compare($arg, "omdr=", 0, strlen("omdr=")) === 0) {
+				$maxDecodingRate = substr($arg, 5);
+			} else
+			if (strlen($arg) >= strlen("otrt=") && substr_compare($arg, "otrt=", 0, strlen("otrt=")) === 0) {
+				$targetResponseTime = substr($arg, 5);
+			} else
+			if (strlen($arg) >= strlen("otdr=") && substr_compare($arg, "otdr=", 0, strlen("otdr=")) === 0) {
+				$targetDecodingRate = substr($arg, 5);
+			} else
+			if (strlen($arg) >= 3 && substr_compare($arg, "on=", 0, 3) === 0) {
+				$noInputTimeout = substr($arg, 3);
+			} else
+			if (strlen($arg) >= 3 && substr_compare($arg, "oo=", 0, 3) === 0) {
+				$recognitionTimeout = substr($arg, 3);
+			} else
 			if (strlen($arg) >= 3 && substr_compare($arg, "oe=", 0, 3) === 0) {
 				$extension = substr($arg, 3);
 			} else
@@ -104,6 +141,9 @@ class WrpTester implements com\amivoice\wrp\WrpListener {
 			} else
 			if (strlen($arg) >= 2 && substr_compare($arg, "u=", 0, 2) === 0) {
 				$serviceAuthorization = substr($arg, 2);
+			} else
+			if (strlen($arg) >= 2 && substr_compare($arg, "v=", 0, 2) === 0) {
+				$voiceDetection = substr($arg, 2);
 			} else
 			if (strlen($arg) >= 2 && substr_compare($arg, "-x", 0, 2) === 0) {
 				$proxyServerName = substr($arg, 2);
@@ -126,6 +166,9 @@ class WrpTester implements com\amivoice\wrp\WrpListener {
 			} else
 			if (strlen($arg) >= 2 && substr_compare($arg, "-v", 0, 2) === 0) {
 				$verbose = true;
+			} else
+			if (strlen($arg) >= 2 && substr_compare($arg, "-1", 0, 2) === 0) {
+				$implementation = 1;
 			} else
 			if (strlen($arg) >= 2 && substr_compare($arg, "-2", 0, 2) === 0) {
 				$implementation = 2;
@@ -153,11 +196,19 @@ class WrpTester implements com\amivoice\wrp\WrpListener {
 			p("  op=<segmenterProperties>");
 			p("  of=<keepFillerToken>");
 			p("  oi=<resultUpdatedInterval>");
+			p("  omdt=<maxDecodingTime>");
+			p("  omrt=<maxResponseTime>");
+			p("  omdr=<maxDecodingRate>");
+			p("  otrt=<targetResponseTime>");
+			p("  otdr=<targetDecodingRate>");
+			p("  on=<noInputTimeout>");
+			p("  oo=<recognitionTimeout>");
 			p("  oe=<extension>");
 			p("  ou=<authorization>");
 			p("  c=<codec>");
 			p("  r=<resultType>");
 			p("  u=<serviceAuthorization>");
+			p("  v=<voiceDetection>");
 			p("Options:");
 			p("  -x<proxyServerName>         (default: -x)");
 			p("  -c<connectionTimeout>       (default: -c5000)");
@@ -212,11 +263,19 @@ class WrpTester implements com\amivoice\wrp\WrpListener {
 		$wrp->setSegmenterProperties($segmenterProperties);
 		$wrp->setKeepFillerToken($keepFillerToken);
 		$wrp->setResultUpdatedInterval($resultUpdatedInterval);
+		$wrp->setMaxDecodingTime($maxDecodingTime);
+		$wrp->setMaxResponseTime($maxResponseTime);
+		$wrp->setMaxDecodingRate($maxDecodingRate);
+		$wrp->setTargetResponseTime($targetResponseTime);
+		$wrp->setTargetDecodingRate($targetDecodingRate);
+		$wrp->setNoInputTimeout($noInputTimeout);
+		$wrp->setRecognitionTimeout($recognitionTimeout);
 		$wrp->setExtension($extension);
 		$wrp->setAuthorization($authorization);
 		$wrp->setCodec($codec);
 		$wrp->setResultType($resultType);
 		$wrp->setServiceAuthorization($serviceAuthorization);
+		$wrp->setVoiceDetection($voiceDetection);
 
 		// WebSocket 音声認識サーバへの接続
 		if (!$wrp->connect()) {
@@ -382,6 +441,9 @@ class WrpTester implements com\amivoice\wrp\WrpListener {
 	}
 
 	private function text_($result) {
+		if (strpos($result, ",\"text\":\"") === false) {
+			return null;
+		}
 		return json_decode($result, true)["text"];
 	}
 }

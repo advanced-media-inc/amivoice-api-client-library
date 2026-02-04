@@ -103,12 +103,12 @@ class Wrp_ extends Wrp {
 		}
 		if ($proxyServerName !== null) {
 			$this->socket_ = @stream_socket_client("tcp://" . $proxyHostName . ":" . $proxyPort, $errorNumber, $errorString, ($connectTimeout === 0) ? 60.0 : $connectTimeout / 1000.0, STREAM_CLIENT_CONNECT);
-			$this->resource_ = $serverURL;
+			$resource = "http" . substr($serverURL, 2);
 		} else {
 			if (self::$_serverCertificateVerification) {
-				$this->socket_ = @stream_socket_client((($scheme === "wss") ? "tlsv1.2" : "tcp") . "://" . $hostName . ":" . $port, $errorNumber, $errorString, ($connectTimeout === 0) ? 60.0 : $connectTimeout / 1000.0, STREAM_CLIENT_CONNECT);
+				$this->socket_ = @stream_socket_client((($scheme === "wss") ? "tls" : "tcp") . "://" . $hostName . ":" . $port, $errorNumber, $errorString, ($connectTimeout === 0) ? 60.0 : $connectTimeout / 1000.0, STREAM_CLIENT_CONNECT);
 			} else {
-				$this->socket_ = @stream_socket_client((($scheme === "wss") ? "tlsv1.2" : "tcp") . "://" . $hostName . ":" . $port, $errorNumber, $errorString, ($connectTimeout === 0) ? 60.0 : $connectTimeout / 1000.0, STREAM_CLIENT_CONNECT, stream_context_create(array("ssl" => array("verify_peer" => false, "verify_peer_name" => false))));
+				$this->socket_ = @stream_socket_client((($scheme === "wss") ? "tls" : "tcp") . "://" . $hostName . ":" . $port, $errorNumber, $errorString, ($connectTimeout === 0) ? 60.0 : $connectTimeout / 1000.0, STREAM_CLIENT_CONNECT, stream_context_create(array("ssl" => array("verify_peer" => false, "verify_peer_name" => false))));
 			}
 		}
 		if ($this->socket_ === false) {
@@ -129,17 +129,17 @@ class Wrp_ extends Wrp {
 		// Upgrade: websocket
 		// Connection: upgrade
 		// Sec-WebSocket-Key: ...
-		// 
+		//
 		// -----------------------------------------------------------
 		$requestHeader = "";
 		$requestHeader .= "GET ";
 		$requestHeader .= $resource;
 		$requestHeader .= " HTTP/1.1\r\n";
-		$requestHeader .= "User-Agent: ";
-		$requestHeader .= Wrp::getVersion();
-		$requestHeader .= "\r\n";
 		$requestHeader .= "Host: ";
 		$requestHeader .= $host;
+		$requestHeader .= "\r\n";
+		$requestHeader .= "User-Agent: ";
+		$requestHeader .= Wrp::getVersion();
 		$requestHeader .= "\r\n";
 		$requestHeader .= "Upgrade: websocket\r\n";
 		$requestHeader .= "Connection: upgrade\r\n";
@@ -163,7 +163,7 @@ class Wrp_ extends Wrp {
 		// Upgrade: websocket
 		// Connection: upgrade
 		// Sec-WebSocket-Accept: ...
-		// 
+		//
 		// -----------------------------------------------------------
 		$responseHeaderBytes = $this->read_CRLFCRLF_();
 		if ($responseHeaderBytes === -1) {
@@ -310,6 +310,7 @@ class Wrp_ extends Wrp {
 			}
 			throw new \Exception("Unexpected end of stream");
 		}
+		$inDataType = (ord($this->inData_[0]) & 0x0F);
 		$inDataBytes = (ord($this->inData_[1]) & 0x7F);
 		$this->shift_(2);
 		if ($inDataBytes === 126) {
@@ -342,7 +343,14 @@ class Wrp_ extends Wrp {
 		if (!$this->read_($inDataBytes)) {
 			throw new \Exception("Unexpected end of stream");
 		}
-		$this->result_($inDataBytes);
+		if ($inDataType === 1) {
+			$this->result_($inDataBytes);
+		} else
+		if ($inDataType === 10) {
+			$this->result_(/* inDataBytes */ 0); // set inDataBytes to 0 so that the data is not treated $as a recognition $result...
+		} else {
+			throw new \Exception("Detected invalid frame data (data type " . $inDataType . ")");
+		}
 		$this->shift_($inDataBytes);
 		return true;
 	}

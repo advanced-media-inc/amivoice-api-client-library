@@ -111,9 +111,9 @@ class Hrp_ extends Hrp {
 			$this->resource_ = $serverURL;
 		} else {
 			if (self::$_serverCertificateVerification) {
-				$this->socket_ = @stream_socket_client((($scheme === "https") ? "tlsv1.2" : "tcp") . "://" . $hostName . ":" . $port, $errorNumber, $errorString, ($connectTimeout === 0) ? 60.0 : $connectTimeout / 1000.0, STREAM_CLIENT_CONNECT);
+				$this->socket_ = @stream_socket_client((($scheme === "https") ? "tls" : "tcp") . "://" . $hostName . ":" . $port, $errorNumber, $errorString, ($connectTimeout === 0) ? 60.0 : $connectTimeout / 1000.0, STREAM_CLIENT_CONNECT);
 			} else {
-				$this->socket_ = @stream_socket_client((($scheme === "https") ? "tlsv1.2" : "tcp") . "://" . $hostName . ":" . $port, $errorNumber, $errorString, ($connectTimeout === 0) ? 60.0 : $connectTimeout / 1000.0, STREAM_CLIENT_CONNECT, stream_context_create(array("ssl" => array("verify_peer" => false, "verify_peer_name" => false))));
+				$this->socket_ = @stream_socket_client((($scheme === "https") ? "tls" : "tcp") . "://" . $hostName . ":" . $port, $errorNumber, $errorString, ($connectTimeout === 0) ? 60.0 : $connectTimeout / 1000.0, STREAM_CLIENT_CONNECT, stream_context_create(array("ssl" => array("verify_peer" => false, "verify_peer_name" => false))));
 			}
 		}
 		if ($this->socket_ === false) {
