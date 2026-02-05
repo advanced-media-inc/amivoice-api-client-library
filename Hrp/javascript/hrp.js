@@ -2,7 +2,7 @@ var Hrp = function() {
 	// public オブジェクト
 	var hrp_ = {
 		// public プロパティ
-		version: "Hrp/1.0.05",
+		version: "Hrp/1.0.12",
 		serverURL: "",
 		serverURLElement: undefined,
 		grammarFileNames: "",
@@ -17,6 +17,22 @@ var Hrp = function() {
 		keepFillerTokenElement: undefined,
 		resultUpdatedInterval: "",
 		resultUpdatedIntervalElement: undefined,
+		mode: "",
+		modeElement: undefined,
+		segmenterType: "",
+		segmenterTypeElement: undefined,
+		maxDecodingTime: "",
+		maxDecodingTimeElement: undefined,
+		maxResponseTime: "",
+		maxResponseTimeElement: undefined,
+		maxDecodingRate: "",
+		maxDecodingRateElement: undefined,
+		targetResponseTime: "",
+		targetResponseTimeElement: undefined,
+		targetDecodingRate: "",
+		targetDecodingRateElement: undefined,
+		recognitionTimeout: "",
+		recognitionTimeoutElement: undefined,
 		extension: "",
 		extensionElement: undefined,
 		authorization: "",
@@ -169,11 +185,19 @@ var Hrp = function() {
 		}
 		if (hrp_.serverURLElement) hrp_.serverURL = hrp_.serverURLElement.value;
 		if (hrp_.grammarFileNamesElement) hrp_.grammarFileNames = hrp_.grammarFileNamesElement.value;
+		if (hrp_.modeElement) hrp_.mode = hrp_.modeElement.value;
 		if (hrp_.profileIdElement) hrp_.profileId = hrp_.profileIdElement.value;
 		if (hrp_.profileWordsElement) hrp_.profileWords = hrp_.profileWordsElement.value;
+		if (hrp_.segmenterTypeElement) hrp_.segmenterType = hrp_.segmenterTypeElement.value;
 		if (hrp_.segmenterPropertiesElement) hrp_.segmenterProperties = hrp_.segmenterPropertiesElement.value;
 		if (hrp_.keepFillerTokenElement) hrp_.keepFillerToken = hrp_.keepFillerTokenElement.value;
 		if (hrp_.resultUpdatedIntervalElement) hrp_.resultUpdatedInterval = hrp_.resultUpdatedIntervalElement.value;
+		if (hrp_.maxDecodingTimeElement) hrp_.maxDecodingTime = hrp_.maxDecodingTimeElement.value;
+		if (hrp_.maxResponseTimeElement) hrp_.maxResponseTime = hrp_.maxResponseTimeElement.value;
+		if (hrp_.maxDecodingRateElement) hrp_.maxDecodingRate = hrp_.maxDecodingRateElement.value;
+		if (hrp_.targetResponseTimeElement) hrp_.targetResponseTime = hrp_.targetResponseTimeElement.value;
+		if (hrp_.targetDecodingRateElement) hrp_.targetDecodingRate = hrp_.targetDecodingRateElement.value;
+		if (hrp_.recognitionTimeoutElement) hrp_.recognitionTimeout = hrp_.recognitionTimeoutElement.value;
 		if (hrp_.extensionElement) hrp_.extension = hrp_.extensionElement.value;
 		if (hrp_.authorizationElement) hrp_.authorization = hrp_.authorizationElement.value;
 		if (hrp_.codecElement) hrp_.codec = hrp_.codecElement.value;
@@ -194,6 +218,13 @@ var Hrp = function() {
 			domainId += "grammarFileNames=";
 			domainId += encodeURIComponent(hrp_.grammarFileNames);
 		}
+		if (hrp_.mode) {
+			if (domainId.length > 0) {
+				domainId += ' ';
+			}
+			domainId += "mode=";
+			domainId += encodeURIComponent(hrp_.mode);
+		}
 		if (hrp_.profileId) {
 			if (domainId.length > 0) {
 				domainId += ' ';
@@ -207,6 +238,13 @@ var Hrp = function() {
 			}
 			domainId += "profileWords=";
 			domainId += encodeURIComponent(hrp_.profileWords);
+		}
+		if (hrp_.segmenterType) {
+			if (domainId.length > 0) {
+				domainId += ' ';
+			}
+			domainId += "segmenterType=";
+			domainId += encodeURIComponent(hrp_.segmenterType);
 		}
 		if (hrp_.segmenterProperties) {
 			if (domainId.length > 0) {
@@ -228,6 +266,48 @@ var Hrp = function() {
 			}
 			domainId += "resultUpdatedInterval=";
 			domainId += encodeURIComponent(hrp_.resultUpdatedInterval);
+		}
+		if (hrp_.maxDecodingTime) {
+			if (domainId.length > 0) {
+				domainId += ' ';
+			}
+			domainId += "maxDecodingTime=";
+			domainId += encodeURIComponent(hrp_.maxDecodingTime);
+		}
+		if (hrp_.maxResponseTime) {
+			if (domainId.length > 0) {
+				domainId += ' ';
+			}
+			domainId += "maxResponseTime=";
+			domainId += encodeURIComponent(hrp_.maxResponseTime);
+		}
+		if (hrp_.maxDecodingRate) {
+			if (domainId.length > 0) {
+				domainId += ' ';
+			}
+			domainId += "maxDecodingRate=";
+			domainId += encodeURIComponent(hrp_.maxDecodingRate);
+		}
+		if (hrp_.targetResponseTime) {
+			if (domainId.length > 0) {
+				domainId += ' ';
+			}
+			domainId += "targetResponseTime=";
+			domainId += encodeURIComponent(hrp_.targetResponseTime);
+		}
+		if (hrp_.targetDecodingRate) {
+			if (domainId.length > 0) {
+				domainId += ' ';
+			}
+			domainId += "targetDecodingRate=";
+			domainId += encodeURIComponent(hrp_.targetDecodingRate);
+		}
+		if (hrp_.recognitionTimeout) {
+			if (domainId.length > 0) {
+				domainId += ' ';
+			}
+			domainId += "recognitionTimeout=";
+			domainId += encodeURIComponent(hrp_.recognitionTimeout);
 		}
 		if (hrp_.extension) {
 			if (domainId.length > 0) {
