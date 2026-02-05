@@ -1,6 +1,6 @@
-var Result = function() {
+var Result = function () {
 	var result_ = {
-		version: "Result/1.0.04",
+		version: "Result/1.0.12",
 		parse: parse_,
 		parseJSON: parseJSON_,
 		parseTEXT: parseTEXT_,
