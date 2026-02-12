@@ -9,11 +9,11 @@ using System.Threading;
 #if !UNITY_2018_4_OR_NEWER
 [assembly: AssemblyTitle("HrpTester")]
 [assembly: AssemblyProduct("HrpTester")]
-[assembly: AssemblyCopyright("Copyright (C) 2019-2021 Advanced Media, Inc.")]
+[assembly: AssemblyCopyright("Copyright (C) 2019-2025 Advanced Media, Inc.")]
 [assembly: ComVisible(false)]
 [assembly: Guid("c7841911-a965-4734-9222-462422948eed")]
-[assembly: AssemblyVersion("1.0.03")]
-[assembly: AssemblyFileVersion("1.0.03")]
+[assembly: AssemblyVersion("1.0.06")]
+[assembly: AssemblyFileVersion("1.0.06")]
 #endif
 
 namespace HrpTester {
@@ -42,6 +42,18 @@ public class HrpTester : com.amivoice.hrp.HrpListener {
 		string keepFillerToken = null;
 		// 認識中イベント発行間隔
 		string resultUpdatedInterval = null;
+		// 最大認識処理時間
+		string maxDecodingTime = null;
+		// 最大応答時間
+		string maxResponseTime = null;
+		// 最大認識処理割合
+		string maxDecodingRate = null;
+		// 目標応答時間
+		string targetResponseTime = null;
+		// 目標認識処理割合
+		string targetDecodingRate = null;
+		// 認識処理タイムアウト
+		string recognitionTimeout = null;
 		// 拡張情報
 		string extension = null;
 		// サービス認証キー文字列
@@ -75,7 +87,7 @@ public class HrpTester : com.amivoice.hrp.HrpListener {
 		// 詳細出力
 		bool verbose = false;
 		// 実装タイプ
-		int implementation = 1;
+		int implementation = 0;
 
 		// 引数のチェック
 		foreach (string arg in args) {
@@ -96,6 +108,24 @@ public class HrpTester : com.amivoice.hrp.HrpListener {
 			} else
 			if (arg.StartsWith("oi=")) {
 				resultUpdatedInterval = arg.Substring(3);
+			} else
+			if (arg.StartsWith("omdt=")) {
+				maxDecodingTime = arg.Substring(5);
+			} else
+			if (arg.StartsWith("omrt=")) {
+				maxResponseTime = arg.Substring(5);
+			} else
+			if (arg.StartsWith("omdr=")) {
+				maxDecodingRate = arg.Substring(5);
+			} else
+			if (arg.StartsWith("otrt=")) {
+				targetResponseTime = arg.Substring(5);
+			} else
+			if (arg.StartsWith("otdr=")) {
+				targetDecodingRate = arg.Substring(5);
+			} else
+			if (arg.StartsWith("oo=")) {
+				recognitionTimeout = arg.Substring(3);
 			} else
 			if (arg.StartsWith("oe=")) {
 				extension = arg.Substring(3);
@@ -155,6 +185,9 @@ public class HrpTester : com.amivoice.hrp.HrpListener {
 			if (arg.StartsWith("-v")) {
 				verbose = true;
 			} else
+			if (arg.StartsWith("-1")) {
+				implementation = 1;
+			} else
 			if (arg.StartsWith("-2")) {
 				implementation = 2;
 			} else
@@ -178,6 +211,12 @@ public class HrpTester : com.amivoice.hrp.HrpListener {
 			Console.WriteLine("  op=<segmenterProperties>");
 			Console.WriteLine("  of=<keepFillerToken>");
 			Console.WriteLine("  oi=<resultUpdatedInterval>");
+			Console.WriteLine("  omdt=<maxDecodingTime>");
+			Console.WriteLine("  omrt=<maxResponseTime>");
+			Console.WriteLine("  omdr=<maxDecodingRate>");
+			Console.WriteLine("  otrt=<targetResponseTime>");
+			Console.WriteLine("  otdr=<targetDecodingRate>");
+			Console.WriteLine("  oo=<recognitionTimeout>");
 			Console.WriteLine("  oe=<extension>");
 			Console.WriteLine("  ou=<authorization>");
 			Console.WriteLine("  d=<domainId>");
@@ -248,6 +287,12 @@ public class HrpTester : com.amivoice.hrp.HrpListener {
 		hrp.setSegmenterProperties(segmenterProperties);
 		hrp.setKeepFillerToken(keepFillerToken);
 		hrp.setResultUpdatedInterval(resultUpdatedInterval);
+		hrp.setMaxDecodingTime(maxDecodingTime);
+		hrp.setMaxResponseTime(maxResponseTime);
+		hrp.setMaxDecodingRate(maxDecodingRate);
+		hrp.setTargetResponseTime(targetResponseTime);
+		hrp.setTargetDecodingRate(targetDecodingRate);
+		hrp.setRecognitionTimeout(recognitionTimeout);
 		hrp.setExtension(extension);
 		hrp.setAuthorization(authorization);
 		hrp.setDomainId(domainId);
@@ -324,10 +369,6 @@ public class HrpTester : com.amivoice.hrp.HrpListener {
 
 					// 音声データファイルの総バイト数の取得
 					long audioDataBytes = new FileInfo(audioFileName).Length;
-					if (audioDataBytes == 0) {
-						Console.WriteLine("音声データファイル " + audioFileName + " の読み込みに失敗しました。");
-						break;
-					}
 
 					// HTTP 音声認識サーバへの音声データの送信の開始
 					if (!hrp.feedDataResume(type, audioDataBytes)) {

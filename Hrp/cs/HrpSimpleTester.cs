@@ -8,11 +8,11 @@ using System.Threading;
 #if !UNITY_2018_4_OR_NEWER
 [assembly: AssemblyTitle("HrpSimpleTester")]
 [assembly: AssemblyProduct("HrpSimpleTester")]
-[assembly: AssemblyCopyright("Copyright (C) 2019-2021 Advanced Media, Inc.")]
+[assembly: AssemblyCopyright("Copyright (C) 2019-2025 Advanced Media, Inc.")]
 [assembly: ComVisible(false)]
 [assembly: Guid("c7841911-a965-4734-9222-462422948eeb")]
-[assembly: AssemblyVersion("1.0.03")]
-[assembly: AssemblyFileVersion("1.0.03")]
+[assembly: AssemblyVersion("1.0.06")]
+[assembly: AssemblyFileVersion("1.0.06")]
 #endif
 
 namespace HrpSimpleTester {
