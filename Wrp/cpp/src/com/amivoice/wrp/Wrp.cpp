@@ -1,4 +1,5 @@
 #include <string>
+#include <sstream>
 #include "Poco/Exception.h"
 #include "Poco/String.h"
 #include "Poco/SynchronizedObject.h"
@@ -16,7 +17,7 @@ namespace wrp {
 
 #define __STRING(x) #x
 #define _STRING(x) __STRING(x)
-const char* Wrp::VERSION = "Wrp/1.0.05"
+const char* Wrp::VERSION = "Wrp/1.0.06"
 #ifdef _MSC_VER
 	" MSVC/" _STRING(_MSC_VER)
 #endif
@@ -44,16 +45,19 @@ const char* Wrp::getVersion() {
 	return VERSION;
 }
 
-Wrp* Wrp::construct(int implementation /* = 1 */) {
+Wrp* Wrp::construct(int implementation /* = 0 */) {
+	if (implementation == 0) {
+		implementation = 2; // default implementation
+	}
 	if (implementation == 1) {
 		return new Wrp_();
 	} else
 	if (implementation == 2) {
 		return new Wrp__();
 	} else {
-		char message[256];
-		std::sprintf(message, "Unknown implementation: %d", implementation);
-		throw std::runtime_error(message);
+		std::stringstream message;
+		message << "Unknown implementation: " << implementation;
+		throw std::runtime_error(message.str());
 	}
 }
 
@@ -64,16 +68,25 @@ Wrp::Wrp() {
 	connectTimeout_ = 0;
 	receiveTimeout_ = 0;
 	grammarFileNames_ = NULL_STRING;
+	mode_ = NULL_STRING;
 	profileId_ = NULL_STRING;
 	profileWords_ = NULL_STRING;
+	segmenterType_ = NULL_STRING;
 	segmenterProperties_ = NULL_STRING;
 	keepFillerToken_ = NULL_STRING;
 	resultUpdatedInterval_ = NULL_STRING;
+	maxDecodingTime_ = NULL_STRING;
+	maxResponseTime_ = NULL_STRING;
+	maxDecodingRate_ = NULL_STRING;
+	targetResponseTime_ = NULL_STRING;
+	targetDecodingRate_ = NULL_STRING;
+	noInputTimeout_ = NULL_STRING;
+	recognitionTimeout_ = NULL_STRING;
 	extension_ = NULL_STRING;
 	authorization_ = NULL_STRING;
 	codec_ = NULL_STRING;
 	resultType_ = NULL_STRING;
-	state_ = 0;
+	state_ = -1;
 	lastMessage_ = "";
 	waitingResults_ = 0;
 }
@@ -113,12 +126,20 @@ void Wrp::setGrammarFileNames(const char* grammarFileNames) {
 	grammarFileNames_ = (grammarFileNames == NULL) ? NULL_STRING : grammarFileNames;
 }
 
+void Wrp::setMode(const char* mode) {
+	mode_ = (mode == NULL) ? NULL_STRING : mode;
+}
+
 void Wrp::setProfileId(const char* profileId) {
 	profileId_ = (profileId == NULL) ? NULL_STRING : profileId;
 }
 
 void Wrp::setProfileWords(const char* profileWords) {
 	profileWords_ = (profileWords == NULL) ? NULL_STRING : profileWords;
+}
+
+void Wrp::setSegmenterType(const char* segmenterType) {
+	segmenterType_ = (segmenterType == NULL) ? NULL_STRING : segmenterType;
 }
 
 void Wrp::setSegmenterProperties(const char* segmenterProperties) {
@@ -131,6 +152,34 @@ void Wrp::setKeepFillerToken(const char* keepFillerToken) {
 
 void Wrp::setResultUpdatedInterval(const char* resultUpdatedInterval) {
 	resultUpdatedInterval_ = (resultUpdatedInterval == NULL) ? NULL_STRING : resultUpdatedInterval;
+}
+
+void Wrp::setMaxDecodingTime(const char* maxDecodingTime) {
+	maxDecodingTime_ = (maxDecodingTime == NULL) ? NULL_STRING : maxDecodingTime;
+}
+
+void Wrp::setMaxResponseTime(const char* maxResponseTime) {
+	maxResponseTime_ = (maxResponseTime == NULL) ? NULL_STRING : maxResponseTime;
+}
+
+void Wrp::setMaxDecodingRate(const char* maxDecodingRate) {
+	maxDecodingRate_ = (maxDecodingRate == NULL) ? NULL_STRING : maxDecodingRate;
+}
+
+void Wrp::setTargetResponseTime(const char* targetResponseTime) {
+	targetResponseTime_ = (targetResponseTime == NULL) ? NULL_STRING : targetResponseTime;
+}
+
+void Wrp::setTargetDecodingRate(const char* targetDecodingRate) {
+	targetDecodingRate_ = (targetDecodingRate == NULL) ? NULL_STRING : targetDecodingRate;
+}
+
+void Wrp::setNoInputTimeout(const char* noInputTimeout) {
+	noInputTimeout_ = (noInputTimeout == NULL) ? NULL_STRING : noInputTimeout;
+}
+
+void Wrp::setRecognitionTimeout(const char* recognitionTimeout) {
+	recognitionTimeout_ = (recognitionTimeout == NULL) ? NULL_STRING : recognitionTimeout;
 }
 
 void Wrp::setExtension(const char* extension) {
@@ -152,6 +201,18 @@ void Wrp::setResultType(const char* resultType) {
 void Wrp::setServiceAuthorization(const char* serviceAuthorization) {
 	if (serviceAuthorization != NULL) {
 		authorization_ = serviceAuthorization;
+	}
+}
+
+void Wrp::setVoiceDetection(const char* voiceDetection) {
+	if (voiceDetection != NULL) {
+		segmenterType_ = "G4";
+		segmenterProperties_ = voiceDetection;
+		if (strlen(voiceDetection) > 3 && voiceDetection[0] == 'G'
+									   && voiceDetection[2] == ' ') {
+			segmenterType_[1] = voiceDetection[1];
+			segmenterProperties_ = &voiceDetection[3];
+		}
 	}
 }
 
@@ -179,6 +240,7 @@ bool Wrp::connect() {
 		if (listener_ != NULL) {
 			listener_->TRACE(lastMessage_.c_str());
 		}
+		state_ = -1;
 		disconnect_();
 		return false;
 	}
@@ -197,6 +259,7 @@ bool Wrp::disconnect() {
 		}
 		return false;
 	}
+	state_ = -1;
 	disconnect_();
 	lastMessage_ = "INFO: disconnected from WebSocket server";
 	if (listener_ != NULL) {
@@ -242,6 +305,16 @@ bool Wrp::feedDataResume() {
 		} else {
 			command += " \001";
 		}
+		if (mode_ != NULL_STRING) {
+			command += " mode=";
+			if (mode_.find(' ') != std::string::npos) {
+				command += '"';
+				command += mode_;
+				command += '"';
+			} else {
+				command += mode_;
+			}
+		}
 		if (profileId_ != NULL_STRING) {
 			command += " profileId=";
 			if (profileId_.find(' ') != std::string::npos) {
@@ -260,6 +333,16 @@ bool Wrp::feedDataResume() {
 				command += '"';
 			} else {
 				command += profileWords_;
+			}
+		}
+		if (segmenterType_ != NULL_STRING) {
+			command += " segmenterType=";
+			if (segmenterType_.find(' ') != std::string::npos) {
+				command += '"';
+				command += segmenterType_;
+				command += '"';
+			} else {
+				command += segmenterType_;
 			}
 		}
 		if (segmenterProperties_ != NULL_STRING) {
@@ -290,6 +373,76 @@ bool Wrp::feedDataResume() {
 				command += '"';
 			} else {
 				command += resultUpdatedInterval_;
+			}
+		}
+		if (maxDecodingTime_ != NULL_STRING) {
+			command += " maxDecodingTime=";
+			if (maxDecodingTime_.find(' ') != std::string::npos) {
+				command += '"';
+				command += maxDecodingTime_;
+				command += '"';
+			} else {
+				command += maxDecodingTime_;
+			}
+		}
+		if (maxResponseTime_ != NULL_STRING) {
+			command += " maxResponseTime=";
+			if (maxResponseTime_.find(' ') != std::string::npos) {
+				command += '"';
+				command += maxResponseTime_;
+				command += '"';
+			} else {
+				command += maxResponseTime_;
+			}
+		}
+		if (maxDecodingRate_ != NULL_STRING) {
+			command += " maxDecodingRate=";
+			if (maxDecodingRate_.find(' ') != std::string::npos) {
+				command += '"';
+				command += maxDecodingRate_;
+				command += '"';
+			} else {
+				command += maxDecodingRate_;
+			}
+		}
+		if (targetResponseTime_ != NULL_STRING) {
+			command += " targetResponseTime=";
+			if (targetResponseTime_.find(' ') != std::string::npos) {
+				command += '"';
+				command += targetResponseTime_;
+				command += '"';
+			} else {
+				command += targetResponseTime_;
+			}
+		}
+		if (targetDecodingRate_ != NULL_STRING) {
+			command += " targetDecodingRate=";
+			if (targetDecodingRate_.find(' ') != std::string::npos) {
+				command += '"';
+				command += targetDecodingRate_;
+				command += '"';
+			} else {
+				command += targetDecodingRate_;
+			}
+		}
+		if (noInputTimeout_ != NULL_STRING) {
+			command += " noInputTimeout=";
+			if (noInputTimeout_.find(' ') != std::string::npos) {
+				command += '"';
+				command += noInputTimeout_;
+				command += '"';
+			} else {
+				command += noInputTimeout_;
+			}
+		}
+		if (recognitionTimeout_ != NULL_STRING) {
+			command += " recognitionTimeout=";
+			if (recognitionTimeout_.find(' ') != std::string::npos) {
+				command += '"';
+				command += recognitionTimeout_;
+				command += '"';
+			} else {
+				command += recognitionTimeout_;
 			}
 		}
 		if (extension_ != NULL_STRING) {
@@ -330,7 +483,7 @@ bool Wrp::feedDataResume() {
 			while (state_ == 1) {
 				checkResponse_(-1);
 			}
-			if (state_ == 5) {
+			if (state_ != 2) {
 				return false;
 			}
 		} catch (Poco::IOException& e) {
@@ -400,7 +553,7 @@ bool Wrp::feedDataPause() {
 			while (state_ == 4) {
 				checkResponse_(-1);
 			}
-			if (state_ == 5) {
+			if (state_ != 0) {
 				return false;
 			}
 		} catch (Poco::IOException& e) {
@@ -430,12 +583,17 @@ void Wrp::onOpen_() {
 }
 
 void Wrp::onClose_() {
+	Poco::SynchronizedObject* synchronizedObject = synchronizedObject_();
+	/* synchronized (this) */ { Poco::ScopedLock<Poco::SynchronizedObject> synchronized(*synchronizedObject);
+		state_ = 0;
+		synchronizedObject->notify();
+	}
 }
 
 void Wrp::onError_(const std::string& cause) {
 	Poco::SynchronizedObject* synchronizedObject = synchronizedObject_();
 	/* synchronized (this) */ { Poco::ScopedLock<Poco::SynchronizedObject> synchronized(*synchronizedObject);
-		if (state_ == 5) {
+		if (state_ == -1 || state_ == 0 || state_ == 5) {
 			return;
 		}
 		lastMessage_ = "ERROR: caught exception (" + cause + ")";

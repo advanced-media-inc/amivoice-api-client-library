@@ -443,6 +443,20 @@ class WrpTester : private com::amivoice::wrp::WrpListener {
 		const char* keepFillerToken = NULL;
 		// 認識中イベント発行間隔
 		const char* resultUpdatedInterval = NULL;
+		// 最大認識処理時間
+		const char* maxDecodingTime = NULL;
+		// 最大応答時間
+		const char* maxResponseTime = NULL;
+		// 最大認識処理割合
+		const char* maxDecodingRate = NULL;
+		// 目標応答時間
+		const char* targetResponseTime = NULL;
+		// 目標認識処理割合
+		const char* targetDecodingRate = NULL;
+		// 発話検出タイムアウト
+		const char* noInputTimeout = NULL;
+		// 認識処理タイムアウト
+		const char* recognitionTimeout = NULL;
 		// 拡張情報
 		const char* extension = NULL;
 		// サービス認証キー文字列
@@ -453,6 +467,8 @@ class WrpTester : private com::amivoice::wrp::WrpListener {
 		const char* resultType = NULL;
 		// サービス認証キー文字列
 		const char* serviceAuthorization = NULL;
+		// 発話区間検出パラメータ文字列
+		const char* voiceDetection = NULL;
 		// 接続タイムアウト
 		int connectTimeout = 5000;
 		// 受信タイムアウト
@@ -464,7 +480,7 @@ class WrpTester : private com::amivoice::wrp::WrpListener {
 		// 詳細出力
 		bool verbose = false;
 		// 実装タイプ
-		int implementation = 1;
+		int implementation = 0;
 
 		// 引数のチェック
 		for (int i = 0; i < args.size(); i++) {
@@ -487,6 +503,27 @@ class WrpTester : private com::amivoice::wrp::WrpListener {
 			if (arg->startsWith("oi=")) {
 				resultUpdatedInterval = arg->toUTF8() + 3;
 			} else
+			if (arg->startsWith("omdt=")) {
+				maxDecodingTime = arg->toUTF8() + 5;
+			} else
+			if (arg->startsWith("omrt=")) {
+				maxResponseTime = arg->toUTF8() + 5;
+			} else
+			if (arg->startsWith("omdr=")) {
+				maxDecodingRate = arg->toUTF8() + 5;
+			} else
+			if (arg->startsWith("otrt=")) {
+				targetResponseTime = arg->toUTF8() + 5;
+			} else
+			if (arg->startsWith("otdr=")) {
+				targetDecodingRate = arg->toUTF8() + 5;
+			} else
+			if (arg->startsWith("on=")) {
+				noInputTimeout = arg->toUTF8() + 3;
+			} else
+			if (arg->startsWith("oo=")) {
+				recognitionTimeout = arg->toUTF8() + 3;
+			} else
 			if (arg->startsWith("oe=")) {
 				extension = arg->toUTF8() + 3;
 			} else
@@ -501,6 +538,9 @@ class WrpTester : private com::amivoice::wrp::WrpListener {
 			} else
 			if (arg->startsWith("u=")) {
 				serviceAuthorization = arg->toUTF8() + 2;
+			} else
+			if (arg->startsWith("v=")) {
+				voiceDetection = arg->toUTF8() + 2;
 			} else
 			if (arg->startsWith("-x")) {
 				proxyServerName = arg->toUTF8() + 2;
@@ -523,6 +563,9 @@ class WrpTester : private com::amivoice::wrp::WrpListener {
 			} else
 			if (arg->startsWith("-v")) {
 				verbose = true;
+			} else
+			if (arg->startsWith("-1")) {
+				implementation = 1;
 			} else
 			if (arg->startsWith("-2")) {
 				implementation = 2;
@@ -550,11 +593,19 @@ class WrpTester : private com::amivoice::wrp::WrpListener {
 			print("  op=<segmenterProperties>");
 			print("  of=<keepFillerToken>");
 			print("  oi=<resultUpdatedInterval>");
+			print("  omdt=<maxDecodingTime>");
+			print("  omrt=<maxResponseTime>");
+			print("  omdr=<maxDecodingRate>");
+			print("  otrt=<targetResponseTime>");
+			print("  otdr=<targetDecodingRate>");
+			print("  on=<noInputTimeout>");
+			print("  oo=<recognitionTimeout>");
 			print("  oe=<extension>");
 			print("  ou=<authorization>");
 			print("  c=<codec>");
 			print("  r=<resultType>");
 			print("  u=<serviceAuthorization>");
+			print("  v=<voiceDetection>");
 			print("Options:");
 			print("  -x<proxyServerName>         (default: -x)");
 			print("  -c<connectionTimeout>       (default: -c5000)");
@@ -610,11 +661,19 @@ class WrpTester : private com::amivoice::wrp::WrpListener {
 			wrp->setSegmenterProperties(segmenterProperties);
 			wrp->setKeepFillerToken(keepFillerToken);
 			wrp->setResultUpdatedInterval(resultUpdatedInterval);
+			wrp->setMaxDecodingTime(maxDecodingTime);
+			wrp->setMaxResponseTime(maxResponseTime);
+			wrp->setMaxDecodingRate(maxDecodingRate);
+			wrp->setTargetResponseTime(targetResponseTime);
+			wrp->setTargetDecodingRate(targetDecodingRate);
+			wrp->setNoInputTimeout(noInputTimeout);
+			wrp->setRecognitionTimeout(recognitionTimeout);
 			wrp->setExtension(extension);
 			wrp->setAuthorization(authorization);
 			wrp->setCodec(codec);
 			wrp->setResultType(resultType);
 			wrp->setServiceAuthorization(serviceAuthorization);
+			wrp->setVoiceDetection(voiceDetection);
 
 			// WebSocket 音声認識サーバへの接続
 			if (!wrp->connect()) {
@@ -818,7 +877,29 @@ class WrpTester : private com::amivoice::wrp::WrpListener {
 					return NULL;
 				}
 			} else {
-				buffer[bufferLength++] = (unsigned short)(char)c;
+				if ((c & 0x80) == 0x00) {
+					// 1 バイト文字 0yyyyyyy → 00000000 0yyyyyyy
+					buffer[bufferLength++] = c;
+				} else
+				if ((c & 0xE0) == 0xC0) {
+					// 2 バイト文字 110xxxyy 10yyyyyy → 00000xxx yyyyyyyy
+					int c1 = (index >= resultLength) ? 0 : result[index++];
+					buffer[bufferLength++] = (unsigned short)(((c << 6) & 0x07C0) | (c1 & 0x3F));
+				} else
+				if ((c & 0xF0) == 0xE0) {
+					// 3 バイト文字 1110xxxx 10xxxxyy 10yyyyyy → xxxxxxxx yyyyyyyy
+					int c1 = (index >= resultLength) ? 0 : result[index++];
+					int c2 = (index >= resultLength) ? 0 : result[index++];
+					buffer[bufferLength++] = (unsigned short)(((c << 12) & 0xF000) | ((c1 << 6) & 0x0FC0) | (c2 & 0x3F));
+				} else
+				if ((c & 0xF8) == 0xF0) {
+					// 4 バイト文字 11110zzz 10zzxxxx 10xxxxyy 10yyyyyy → 110110ZZ ZZxxxxxx 110111xx yyyyyyyy
+					int c1 = (index >= resultLength) ? 0 : result[index++];
+					int c2 = (index >= resultLength) ? 0 : result[index++];
+					int c3 = (index >= resultLength) ? 0 : result[index++];
+					buffer[bufferLength++] = (unsigned short)(0xD800 | ((((((c << 2) & 0x1C) | ((c1 >> 4) & 0x03)) - 1) << 6) & 0x03C0) | ((c1 << 2) & 0x3C) | ((c2 >> 4) & 0x03));
+					buffer[bufferLength++] = (unsigned short)(0xDC00 | (((c2 << 6) & 0x03C0) | (c3 & 0x3F)));
+				}
 			}
 			c = (index >= resultLength) ? 0 : result[index++];
 		}

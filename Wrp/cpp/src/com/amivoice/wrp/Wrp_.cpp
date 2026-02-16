@@ -6,6 +6,7 @@
 #include "Poco/SynchronizedObject.h"
 #include "Poco/Thread.h"
 #include "Poco/Timespan.h"
+#include "Poco/Version.h"
 #include "Poco/Net/Context.h"
 #include "Poco/Net/SecureStreamSocket.h"
 #include "Poco/Net/SocketAddress.h"
@@ -184,11 +185,16 @@ void Wrp_::connect_(const std::string& serverURL, const std::string& proxyServer
 		}
 	}
 	if (scheme == "wss") {
-		const Poco::Net::Context::Ptr context = new Poco::Net::Context(Poco::Net::Context::TLSV1_2_CLIENT_USE, "", "", "", (_serverCertificateVerification) ? Poco::Net::Context::VERIFY_RELAXED : Poco::Net::Context::VERIFY_NONE, 9, true);
+#if POCO_VERSION >= 0x010A0000
+		const Poco::Net::Context::Ptr context = new Poco::Net::Context(Poco::Net::Context::TLS_CLIENT_USE, "", (_serverCertificateVerification) ? Poco::Net::Context::VERIFY_RELAXED : Poco::Net::Context::VERIFY_NONE, 9, true);
+#else
+		const Poco::Net::Context::Ptr context = new Poco::Net::Context(Poco::Net::Context::TLSV1_2_CLIENT_USE, "", (_serverCertificateVerification) ? Poco::Net::Context::VERIFY_RELAXED : Poco::Net::Context::VERIFY_NONE, 9, true);
+#endif
 		socket_ = Poco::Net::SecureStreamSocket::attach(socket, hostName, context);
 	} else {
 		socket_ = socket;
 	}
+	socket_.setBlocking(false);
 	out_ = new Poco::Net::SocketStream(socket_);
 	inDataBytes_ = 0;
 	result__.clear();
@@ -198,17 +204,17 @@ void Wrp_::connect_(const std::string& serverURL, const std::string& proxyServer
 	// Upgrade: websocket
 	// Connection: upgrade
 	// Sec-WebSocket-Key: ...
-	// 
+	//
 	// -----------------------------------------------------------
 	std::string requestHeader;
 	requestHeader += "GET ";
 	requestHeader += resource;
 	requestHeader += " HTTP/1.1\r\n";
-	requestHeader += "User-Agent: ";
-	requestHeader += Wrp::getVersion();
-	requestHeader += "\r\n";
 	requestHeader += "Host: ";
 	requestHeader += host;
+	requestHeader += "\r\n";
+	requestHeader += "User-Agent: ";
+	requestHeader += Wrp::getVersion();
 	requestHeader += "\r\n";
 	requestHeader += "Upgrade: websocket\r\n";
 	requestHeader += "Connection: upgrade\r\n";
@@ -233,7 +239,7 @@ void Wrp_::connect_(const std::string& serverURL, const std::string& proxyServer
 	// Upgrade: websocket
 	// Connection: upgrade
 	// Sec-WebSocket-Accept: ...
-	// 
+	//
 	// -----------------------------------------------------------
 	int responseHeaderBytes = read_CRLFCRLF_();
 	if (responseHeaderBytes == -1) {
@@ -260,7 +266,7 @@ void Wrp_::disconnect_() /* override */ {
 	if (socket_.impl()->initialized()) {
 		try {
 			socket_.shutdown();
-		} catch (Poco::Exception& e) {}
+		} catch (Poco::Exception& /* e */) {}
 	}
 	if (thread_ != NULL) {
 		thread_->join();
@@ -383,6 +389,7 @@ bool Wrp_::receiveResponse_() {
 		}
 		throw Poco::IOException("Unexpected end of stream");
 	}
+	int inDataType = (inData_[0] & 0x0F);
 	int inDataBytes = (inData_[1] & 0x7F);
 	shift_(2);
 	if (inDataBytes == 126) {
@@ -415,7 +422,14 @@ bool Wrp_::receiveResponse_() {
 	if (!read_(inDataBytes)) {
 		throw Poco::IOException("Unexpected end of stream");
 	}
-	result_(inDataBytes);
+	if (inDataType == 1) {
+		result_(inDataBytes);
+	} else
+	if (inDataType == 10) {
+		result_(/* inDataBytes */ 0); // set inDataBytes to 0 so that the data is not treated as a recognition result...
+	} else {
+		throw Poco::IOException("Detected invalid frame data (data type " + std::to_string(inDataType) + ")");
+	}
 	shift_(inDataBytes);
 	return true;
 }
@@ -425,6 +439,10 @@ int Wrp_::read_CRLFCRLF_() {
 	while (inDataBytes == -1) {
 		ensure_(inDataBytes_ + 4096);
 		int inDataReadBytes = socket_.receiveBytes(&inData_[inDataBytes_], 4096);
+		while (inDataReadBytes < 0) {
+			Poco::Thread::sleep(1);
+			inDataReadBytes = socket_.receiveBytes(&inData_[inDataBytes_], 4096);
+		}
 		if (inDataReadBytes == 0) {
 			return -1;
 		}
@@ -450,6 +468,10 @@ bool Wrp_::read_(int inDataBytes) {
 	ensure_(inDataBytes);
 	while (inDataBytes_ < inDataBytes) {
 		int inDataReadBytes = socket_.receiveBytes(&inData_[inDataBytes_], inDataBytes - inDataBytes_);
+		while (inDataReadBytes < 0) {
+			Poco::Thread::sleep(1);
+			inDataReadBytes = socket_.receiveBytes(&inData_[inDataBytes_], inDataBytes - inDataBytes_);
+		}
 		if (inDataReadBytes == 0) {
 			return false;
 		}

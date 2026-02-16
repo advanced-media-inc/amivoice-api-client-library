@@ -1,5 +1,6 @@
 #include <cctype>
 #include <string>
+#include <sstream>
 #include "Poco/Base64Encoder.h"
 #include "Poco/Exception.h"
 #include "Poco/NumberFormatter.h"
@@ -8,6 +9,7 @@
 #include "Poco/Thread.h"
 #include "Poco/Timespan.h"
 #include "Poco/URI.h"
+#include "Poco/Version.h"
 #include "Poco/Net/Context.h"
 #include "Poco/Net/SecureStreamSocket.h"
 #include "Poco/Net/SocketAddress.h"
@@ -177,11 +179,16 @@ void Hrp_::connect_(const std::string& serverURL, const std::string& proxyServer
 		}
 	}
 	if (scheme == "https") {
-		const Poco::Net::Context::Ptr context = new Poco::Net::Context(Poco::Net::Context::TLSV1_2_CLIENT_USE, "", "", "", (_serverCertificateVerification) ? Poco::Net::Context::VERIFY_RELAXED : Poco::Net::Context::VERIFY_NONE, 9, true);
+#if POCO_VERSION >= 0x010A0000
+		const Poco::Net::Context::Ptr context = new Poco::Net::Context(Poco::Net::Context::TLS_CLIENT_USE, "", (_serverCertificateVerification) ? Poco::Net::Context::VERIFY_RELAXED : Poco::Net::Context::VERIFY_NONE, 9, true);
+#else
+		const Poco::Net::Context::Ptr context = new Poco::Net::Context(Poco::Net::Context::TLSV1_2_CLIENT_USE, "", (_serverCertificateVerification) ? Poco::Net::Context::VERIFY_RELAXED : Poco::Net::Context::VERIFY_NONE, 9, true);
+#endif
 		socket_ = Poco::Net::SecureStreamSocket::attach(socket, hostName, context);
 	} else {
 		socket_ = socket;
 	}
+	socket_.setBlocking(false);
 	out_ = new Poco::Net::SocketStream(socket_);
 	thread_ = new Poco::Thread();
 	thread_->start(*this);
@@ -195,7 +202,7 @@ void Hrp_::disconnect_() /* override */ {
 	if (socket_.impl()->initialized()) {
 		try {
 			socket_.shutdown();
-		} catch (Poco::Exception& e) {}
+		} catch (Poco::Exception& /* e */) {}
 	}
 	if (thread_ != NULL) {
 		thread_->join();
@@ -550,6 +557,10 @@ int Hrp_::read_CRLFCRLF_() {
 	while (inDataBytes == -1) {
 		ensure_(inDataBytes_ + 4096);
 		int inDataReadBytes = socket_.receiveBytes(&inData_[inDataBytes_], 4096);
+		while (inDataReadBytes < 0) {
+			Poco::Thread::sleep(1);
+			inDataReadBytes = socket_.receiveBytes(&inData_[inDataBytes_], 4096);
+		}
 		if (inDataReadBytes == 0) {
 			return -1;
 		}
@@ -576,6 +587,10 @@ int Hrp_::read_CRLF_() {
 	while (inDataBytes == -1) {
 		ensure_(inDataBytes_ + 4096);
 		int inDataReadBytes = socket_.receiveBytes(&inData_[inDataBytes_], 4096);
+		while (inDataReadBytes < 0) {
+			Poco::Thread::sleep(1);
+			inDataReadBytes = socket_.receiveBytes(&inData_[inDataBytes_], 4096);
+		}
 		if (inDataReadBytes == 0) {
 			return -1;
 		}
@@ -599,6 +614,10 @@ bool Hrp_::read_(int inDataBytes) {
 	ensure_(inDataBytes);
 	while (inDataBytes_ < inDataBytes) {
 		int inDataReadBytes = socket_.receiveBytes(&inData_[inDataBytes_], inDataBytes - inDataBytes_);
+		while (inDataReadBytes < 0) {
+			Poco::Thread::sleep(1);
+			inDataReadBytes = socket_.receiveBytes(&inData_[inDataBytes_], inDataBytes - inDataBytes_);
+		}
 		if (inDataReadBytes == 0) {
 			return false;
 		}

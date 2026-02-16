@@ -443,6 +443,18 @@ class HrpTester : private com::amivoice::hrp::HrpListener {
 		const char* keepFillerToken = NULL;
 		// 認識中イベント発行間隔
 		const char* resultUpdatedInterval = NULL;
+		// 最大認識処理時間
+		const char* maxDecodingTime = NULL;
+		// 最大応答時間
+		const char* maxResponseTime = NULL;
+		// 最大認識処理割合
+		const char* maxDecodingRate = NULL;
+		// 目標応答時間
+		const char* targetResponseTime = NULL;
+		// 目標認識処理割合
+		const char* targetDecodingRate = NULL;
+		// 認識処理タイムアウト
+		const char* recognitionTimeout = NULL;
 		// 拡張情報
 		const char* extension = NULL;
 		// サービス認証キー文字列
@@ -476,7 +488,7 @@ class HrpTester : private com::amivoice::hrp::HrpListener {
 		// 詳細出力
 		bool verbose = false;
 		// 実装タイプ
-		int implementation = 1;
+		int implementation = 0;
 
 		// 引数のチェック
 		for (int i = 0; i < args.size(); i++) {
@@ -498,6 +510,24 @@ class HrpTester : private com::amivoice::hrp::HrpListener {
 			} else
 			if (arg->startsWith("oi=")) {
 				resultUpdatedInterval = arg->toUTF8() + 3;
+			} else
+			if (arg->startsWith("omdt=")) {
+				maxDecodingTime = arg->toUTF8() + 5;
+			} else
+			if (arg->startsWith("omrt=")) {
+				maxResponseTime = arg->toUTF8() + 5;
+			} else
+			if (arg->startsWith("omdr=")) {
+				maxDecodingRate = arg->toUTF8() + 5;
+			} else
+			if (arg->startsWith("otrt=")) {
+				targetResponseTime = arg->toUTF8() + 5;
+			} else
+			if (arg->startsWith("otdr=")) {
+				targetDecodingRate = arg->toUTF8() + 5;
+			} else
+			if (arg->startsWith("oo=")) {
+				recognitionTimeout = arg->toUTF8() + 3;
 			} else
 			if (arg->startsWith("oe=")) {
 				extension = arg->toUTF8() + 3;
@@ -557,6 +587,9 @@ class HrpTester : private com::amivoice::hrp::HrpListener {
 			if (arg->startsWith("-v")) {
 				verbose = true;
 			} else
+			if (arg->startsWith("-1")) {
+				implementation = 1;
+			} else
 			if (arg->startsWith("-2")) {
 				implementation = 2;
 			} else
@@ -580,6 +613,12 @@ class HrpTester : private com::amivoice::hrp::HrpListener {
 			print("  op=<segmenterProperties>");
 			print("  of=<keepFillerToken>");
 			print("  oi=<resultUpdatedInterval>");
+			print("  omdt=<maxDecodingTime>");
+			print("  omrt=<maxResponseTime>");
+			print("  omdr=<maxDecodingRate>");
+			print("  otrt=<targetResponseTime>");
+			print("  otdr=<targetDecodingRate>");
+			print("  oo=<recognitionTimeout>");
 			print("  oe=<extension>");
 			print("  ou=<authorization>");
 			print("  d=<domainId>");
@@ -651,6 +690,12 @@ class HrpTester : private com::amivoice::hrp::HrpListener {
 			hrp->setSegmenterProperties(segmenterProperties);
 			hrp->setKeepFillerToken(keepFillerToken);
 			hrp->setResultUpdatedInterval(resultUpdatedInterval);
+			hrp->setMaxDecodingTime(maxDecodingTime);
+			hrp->setMaxResponseTime(maxResponseTime);
+			hrp->setMaxDecodingRate(maxDecodingRate);
+			hrp->setTargetResponseTime(targetResponseTime);
+			hrp->setTargetDecodingRate(targetDecodingRate);
+			hrp->setRecognitionTimeout(recognitionTimeout);
 			hrp->setExtension(extension);
 			hrp->setAuthorization(authorization);
 			hrp->setDomainId(domainId);
@@ -727,10 +772,6 @@ class HrpTester : private com::amivoice::hrp::HrpListener {
 
 					// 音声データファイルの総バイト数の取得
 					long long audioDataBytes = getFileSize(audioFileName->to());
-					if (audioDataBytes == 0) {
-						print("音声データファイル %s の読み込みに失敗しました。", audioFileName->to());
-						break;
-					}
 
 					// HTTP 音声認識サーバへの音声データの送信の開始
 					if (!hrp->feedDataResume(type, audioDataBytes)) {
@@ -885,7 +926,29 @@ class HrpTester : private com::amivoice::hrp::HrpListener {
 					return NULL;
 				}
 			} else {
-				buffer[bufferLength++] = (unsigned short)(char)c;
+				if ((c & 0x80) == 0x00) {
+					// 1 バイト文字 0yyyyyyy → 00000000 0yyyyyyy
+					buffer[bufferLength++] = c;
+				} else
+				if ((c & 0xE0) == 0xC0) {
+					// 2 バイト文字 110xxxyy 10yyyyyy → 00000xxx yyyyyyyy
+					int c1 = (index >= resultLength) ? 0 : result[index++];
+					buffer[bufferLength++] = (unsigned short)(((c << 6) & 0x07C0) | (c1 & 0x3F));
+				} else
+				if ((c & 0xF0) == 0xE0) {
+					// 3 バイト文字 1110xxxx 10xxxxyy 10yyyyyy → xxxxxxxx yyyyyyyy
+					int c1 = (index >= resultLength) ? 0 : result[index++];
+					int c2 = (index >= resultLength) ? 0 : result[index++];
+					buffer[bufferLength++] = (unsigned short)(((c << 12) & 0xF000) | ((c1 << 6) & 0x0FC0) | (c2 & 0x3F));
+				} else
+				if ((c & 0xF8) == 0xF0) {
+					// 4 バイト文字 11110zzz 10zzxxxx 10xxxxyy 10yyyyyy → 110110ZZ ZZxxxxxx 110111xx yyyyyyyy
+					int c1 = (index >= resultLength) ? 0 : result[index++];
+					int c2 = (index >= resultLength) ? 0 : result[index++];
+					int c3 = (index >= resultLength) ? 0 : result[index++];
+					buffer[bufferLength++] = (unsigned short)(0xD800 | ((((((c << 2) & 0x1C) | ((c1 >> 4) & 0x03)) - 1) << 6) & 0x03C0) | ((c1 << 2) & 0x3C) | ((c2 >> 4) & 0x03));
+					buffer[bufferLength++] = (unsigned short)(0xDC00 | (((c2 << 6) & 0x03C0) | (c3 & 0x3F)));
+				}
 			}
 			c = (index >= resultLength) ? 0 : result[index++];
 		}

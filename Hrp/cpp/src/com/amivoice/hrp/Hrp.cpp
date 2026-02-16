@@ -1,4 +1,5 @@
 #include <string>
+#include <sstream>
 #include "Poco/Exception.h"
 #include "Poco/SynchronizedObject.h"
 #include "Poco/Thread.h"
@@ -17,7 +18,7 @@ namespace hrp {
 
 #define __STRING(x) #x
 #define _STRING(x) __STRING(x)
-const char* Hrp::VERSION = "Hrp/1.0.05"
+const char* Hrp::VERSION = "Hrp/1.0.06"
 #ifdef _MSC_VER
 	" MSVC/" _STRING(_MSC_VER)
 #endif
@@ -45,16 +46,19 @@ const char* Hrp::getVersion() {
 	return VERSION;
 }
 
-Hrp* Hrp::construct(int implementation /* = 1 */) {
+Hrp* Hrp::construct(int implementation /* = 0 */) {
+	if (implementation == 0) {
+		implementation = 2; // default implementation
+	}
 	if (implementation == 1) {
 		return new Hrp_();
 	} else
 	if (implementation == 2) {
 		return new Hrp__();
 	} else {
-		char message[256];
-		std::sprintf(message, "Unknown implementation: %d", implementation);
-		throw std::runtime_error(message);
+		std::stringstream message;
+		message << "Unknown implementation: " << implementation;
+		throw std::runtime_error(message.str());
 	}
 }
 
@@ -65,11 +69,19 @@ Hrp::Hrp() {
 	connectTimeout_ = 0;
 	receiveTimeout_ = 0;
 	grammarFileNames_ = NULL_STRING;
+	mode_ = NULL_STRING;
 	profileId_ = NULL_STRING;
 	profileWords_ = NULL_STRING;
+	segmenterType_ = NULL_STRING;
 	segmenterProperties_ = NULL_STRING;
 	keepFillerToken_ = NULL_STRING;
 	resultUpdatedInterval_ = NULL_STRING;
+	maxDecodingTime_ = NULL_STRING;
+	maxResponseTime_ = NULL_STRING;
+	maxDecodingRate_ = NULL_STRING;
+	targetResponseTime_ = NULL_STRING;
+	targetDecodingRate_ = NULL_STRING;
+	recognitionTimeout_ = NULL_STRING;
 	extension_ = NULL_STRING;
 	authorization_ = NULL_STRING;
 	domainId_ = NULL_STRING;
@@ -81,7 +93,7 @@ Hrp::Hrp() {
 	acceptTopic_ = NULL_STRING;
 	contentType_ = NULL_STRING;
 	accept_ = NULL_STRING;
-	state_ = 0;
+	state_ = -1;
 	lastMessage_ = "";
 }
 
@@ -112,12 +124,20 @@ void Hrp::setGrammarFileNames(const char* grammarFileNames) {
 	grammarFileNames_ = (grammarFileNames == NULL) ? NULL_STRING : grammarFileNames;
 }
 
+void Hrp::setMode(const char* mode) {
+	mode_ = (mode == NULL) ? NULL_STRING : mode;
+}
+
 void Hrp::setProfileId(const char* profileId) {
 	profileId_ = (profileId == NULL) ? NULL_STRING : profileId;
 }
 
 void Hrp::setProfileWords(const char* profileWords) {
 	profileWords_ = (profileWords == NULL) ? NULL_STRING : profileWords;
+}
+
+void Hrp::setSegmenterType(const char* segmenterType) {
+	segmenterType_ = (segmenterType == NULL) ? NULL_STRING : segmenterType;
 }
 
 void Hrp::setSegmenterProperties(const char* segmenterProperties) {
@@ -130,6 +150,30 @@ void Hrp::setKeepFillerToken(const char* keepFillerToken) {
 
 void Hrp::setResultUpdatedInterval(const char* resultUpdatedInterval) {
 	resultUpdatedInterval_ = (resultUpdatedInterval == NULL) ? NULL_STRING : resultUpdatedInterval;
+}
+
+void Hrp::setMaxDecodingTime(const char* maxDecodingTime) {
+	maxDecodingTime_ = (maxDecodingTime == NULL) ? NULL_STRING : maxDecodingTime;
+}
+
+void Hrp::setMaxResponseTime(const char* maxResponseTime) {
+	maxResponseTime_ = (maxResponseTime == NULL) ? NULL_STRING : maxResponseTime;
+}
+
+void Hrp::setMaxDecodingRate(const char* maxDecodingRate) {
+	maxDecodingRate_ = (maxDecodingRate == NULL) ? NULL_STRING : maxDecodingRate;
+}
+
+void Hrp::setTargetResponseTime(const char* targetResponseTime) {
+	targetResponseTime_ = (targetResponseTime == NULL) ? NULL_STRING : targetResponseTime;
+}
+
+void Hrp::setTargetDecodingRate(const char* targetDecodingRate) {
+	targetDecodingRate_ = (targetDecodingRate == NULL) ? NULL_STRING : targetDecodingRate;
+}
+
+void Hrp::setRecognitionTimeout(const char* recognitionTimeout) {
+	recognitionTimeout_ = (recognitionTimeout == NULL) ? NULL_STRING : recognitionTimeout;
 }
 
 void Hrp::setExtension(const char* extension) {
@@ -199,6 +243,7 @@ bool Hrp::connect() {
 		if (listener_ != NULL) {
 			listener_->TRACE(lastMessage_.c_str());
 		}
+		state_ = -1;
 		disconnect_();
 		return false;
 	}
@@ -217,6 +262,7 @@ bool Hrp::disconnect() {
 		}
 		return false;
 	}
+	state_ = -1;
 	disconnect_();
 	lastMessage_ = "INFO: disconnected from HTTP server";
 	if (listener_ != NULL) {
@@ -299,6 +345,13 @@ bool Hrp::feedDataResume(const char* type, long long dataBytes) {
 				domainId += "grammarFileNames=";
 				Poco::URI::encode(grammarFileNames_, RESERVED_FRAGMENT, domainId);
 			}
+			if (mode_ != NULL_STRING) {
+				if (domainId.length() > 0) {
+					domainId += ' ';
+				}
+				domainId += "mode=";
+				Poco::URI::encode(mode_, RESERVED_FRAGMENT, domainId);
+			}
 			if (profileId_ != NULL_STRING) {
 				if (domainId.length() > 0) {
 					domainId += ' ';
@@ -312,6 +365,13 @@ bool Hrp::feedDataResume(const char* type, long long dataBytes) {
 				}
 				domainId += "profileWords=";
 				Poco::URI::encode(profileWords_, RESERVED_FRAGMENT, domainId);
+			}
+			if (segmenterType_ != NULL_STRING) {
+				if (domainId.length() > 0) {
+					domainId += ' ';
+				}
+				domainId += "segmenterType=";
+				Poco::URI::encode(segmenterType_, RESERVED_FRAGMENT, domainId);
 			}
 			if (segmenterProperties_ != NULL_STRING) {
 				if (domainId.length() > 0) {
@@ -333,6 +393,48 @@ bool Hrp::feedDataResume(const char* type, long long dataBytes) {
 				}
 				domainId += "resultUpdatedInterval=";
 				Poco::URI::encode(resultUpdatedInterval_, RESERVED_FRAGMENT, domainId);
+			}
+			if (maxDecodingTime_ != NULL_STRING) {
+				if (domainId.length() > 0) {
+					domainId += ' ';
+				}
+				domainId += "maxDecodingTime=";
+				Poco::URI::encode(maxDecodingTime_, RESERVED_FRAGMENT, domainId);
+			}
+			if (maxResponseTime_ != NULL_STRING) {
+				if (domainId.length() > 0) {
+					domainId += ' ';
+				}
+				domainId += "maxResponseTime=";
+				Poco::URI::encode(maxResponseTime_, RESERVED_FRAGMENT, domainId);
+			}
+			if (maxDecodingRate_ != NULL_STRING) {
+				if (domainId.length() > 0) {
+					domainId += ' ';
+				}
+				domainId += "maxDecodingRate=";
+				Poco::URI::encode(maxDecodingRate_, RESERVED_FRAGMENT, domainId);
+			}
+			if (targetResponseTime_ != NULL_STRING) {
+				if (domainId.length() > 0) {
+					domainId += ' ';
+				}
+				domainId += "targetResponseTime=";
+				Poco::URI::encode(targetResponseTime_, RESERVED_FRAGMENT, domainId);
+			}
+			if (targetDecodingRate_ != NULL_STRING) {
+				if (domainId.length() > 0) {
+					domainId += ' ';
+				}
+				domainId += "targetDecodingRate=";
+				Poco::URI::encode(targetDecodingRate_, RESERVED_FRAGMENT, domainId);
+			}
+			if (recognitionTimeout_ != NULL_STRING) {
+				if (domainId.length() > 0) {
+					domainId += ' ';
+				}
+				domainId += "recognitionTimeout=";
+				Poco::URI::encode(recognitionTimeout_, RESERVED_FRAGMENT, domainId);
 			}
 			if (extension_ != NULL_STRING) {
 				if (domainId.length() > 0) {
@@ -477,7 +579,7 @@ void Hrp::onClose_() {
 void Hrp::onError_(const std::string& cause) {
 	Poco::SynchronizedObject* synchronizedObject = synchronizedObject_();
 	/* synchronized (this) */ { Poco::ScopedLock<Poco::SynchronizedObject> synchronized(*synchronizedObject);
-		if (state_ == 5) {
+		if (state_ == -1 || state_ == 0 || state_ == 5) {
 			return;
 		}
 		lastMessage_ = "ERROR: caught exception (" + cause + ")";

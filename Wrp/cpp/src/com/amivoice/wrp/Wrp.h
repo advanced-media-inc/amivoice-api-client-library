@@ -6,7 +6,7 @@
 
 #if defined(_WIN32)
  #if defined(_USRDLL)
-  #define WRP_API _declspec(dllexport)
+  #define WRP_API __declspec(dllexport)
  #else
   #define WRP_API __declspec(dllimport)
  #endif
@@ -39,11 +39,20 @@ class WRP_API Wrp {
 	private: int connectTimeout_;
 	private: int receiveTimeout_;
 	private: std::string grammarFileNames_;
+	private: std::string mode_;
 	private: std::string profileId_;
 	private: std::string profileWords_;
+	private: std::string segmenterType_;
 	private: std::string segmenterProperties_;
 	private: std::string keepFillerToken_;
 	private: std::string resultUpdatedInterval_;
+	private: std::string maxDecodingTime_;
+	private: std::string maxResponseTime_;
+	private: std::string maxDecodingRate_;
+	private: std::string targetResponseTime_;
+	private: std::string targetDecodingRate_;
+	private: std::string noInputTimeout_;
+	private: std::string recognitionTimeout_;
 	private: std::string extension_;
 	private: std::string authorization_;
 	private: std::string codec_;
@@ -61,16 +70,26 @@ class WRP_API Wrp {
 	public: void setConnectTimeout(int connectTimeout);
 	public: void setReceiveTimeout(int receiveTimeout);
 	public: void setGrammarFileNames(const char* grammarFileNames);
+	public: void setMode(const char* mode);
 	public: void setProfileId(const char* profileId);
 	public: void setProfileWords(const char* profileWords);
+	public: void setSegmenterType(const char* segmenterType);
 	public: void setSegmenterProperties(const char* segmenterProperties);
 	public: void setKeepFillerToken(const char* keepFillerToken);
 	public: void setResultUpdatedInterval(const char* resultUpdatedInterval);
+	public: void setMaxDecodingTime(const char* maxDecodingTime);
+	public: void setMaxResponseTime(const char* maxResponseTime);
+	public: void setMaxDecodingRate(const char* maxDecodingRate);
+	public: void setTargetResponseTime(const char* targetResponseTime);
+	public: void setTargetDecodingRate(const char* targetDecodingRate);
+	public: void setNoInputTimeout(const char* noInputTimeout);
+	public: void setRecognitionTimeout(const char* recognitionTimeout);
 	public: void setExtension(const char* extension);
 	public: void setAuthorization(const char* authorization);
 	public: void setCodec(const char* codec);
 	public: void setResultType(const char* resultType);
 	public: void setServiceAuthorization(const char* serviceAuthorization);
+	public: void setVoiceDetection(const char* voiceDetection);
 	public: bool connect();
 	protected: virtual void connect_(const std::string& serverURL, const std::string& proxyServerName, int connectTimeout, int receiveTimeout) = 0;
 	public: bool disconnect();

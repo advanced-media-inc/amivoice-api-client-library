@@ -1,14 +1,15 @@
 #!/bin/bash
 set -eu
+NAME=Hrp
 echo ""
-echo "==== libHrp.so"
+echo "==== lib$NAME.so"
 echo ""
-(cd src; make -f Hrp.makefile)
+(cd src; make -f $NAME.makefile "$@")
 echo ""
-echo "==== HrpSimpleTester"
+echo "==== ${NAME}SimpleTester"
 echo ""
-make -f HrpSimpleTester.makefile
+make -f ${NAME}SimpleTester.makefile "$@"
 echo ""
-echo "==== HrpTester"
+echo "==== ${NAME}Tester"
 echo ""
-make -f HrpTester.makefile
+make -f ${NAME}Tester.makefile "$@"

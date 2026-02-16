@@ -1,6 +1,6 @@
 PRJ = Wrp
 
-CPPC = g++ -std=c++11
+CPPC = g++ -std=c++17
 LD = g++
 LDD = ldd -d
 
@@ -18,11 +18,9 @@ LIB = \
 	-lPocoUtil \
 	-lPocoJSON \
 	-lPocoXML \
-	-lPocoEncodings \
 	-lPocoFoundation \
-	-lpthread \
-	-lssl \
-	-lcrypto
+	$(POCO_HOME)/lib/linux/x86_64/libssl.a \
+	$(POCO_HOME)/lib/linux/x86_64/libcrypto.a
 
 CPPDEFINES = \
 	-DLINUX \
@@ -41,11 +39,11 @@ CPPFLAGS = \
 LDFLAGS = \
 	-shared \
 	-fPIC \
-	-L$(POCO_HOME)/lib/linux64
+	-L$(POCO_HOME)/lib/linux/x86_64
 
-OUTDIR = ../bin/linux64$(if $(debug),_debug,_release)
-OBJDIR = obj/linux64_dynamic$(if $(debug),_debug,_release)
-	
+OUTDIR = ../bin/linux_x86_64$(if $(debug),_debug,_release)
+OBJDIR = obj/linux_x86_64$(if $(debug),_debug,_release)
+
 OUT = $(OUTDIR)/lib$(PRJ).so
 OBJ = $(patsubst %.cpp,$(OBJDIR)/%.o,$(notdir $(SRC)))
 DEP = $(patsubst %.cpp,$(OBJDIR)/%.d,$(notdir $(SRC)))

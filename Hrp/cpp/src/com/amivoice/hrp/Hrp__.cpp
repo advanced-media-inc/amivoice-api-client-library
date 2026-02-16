@@ -6,6 +6,7 @@
 #include "Poco/SynchronizedObject.h"
 #include "Poco/Timespan.h"
 #include "Poco/URI.h"
+#include "Poco/Version.h"
 #include "Poco/Net/Context.h"
 #include "Poco/Net/HTTPClientSession.h"
 #include "Poco/Net/HTTPSClientSession.h"
@@ -93,7 +94,11 @@ void Hrp__::connect_(const std::string& serverURL, const std::string& proxyServe
 		}
 	}
 	if (scheme == "https") {
-		const Poco::Net::Context::Ptr context = new Poco::Net::Context(Poco::Net::Context::TLSV1_2_CLIENT_USE, "", "", "", (_serverCertificateVerification) ? Poco::Net::Context::VERIFY_RELAXED : Poco::Net::Context::VERIFY_NONE, 9, true);
+#if POCO_VERSION >= 0x010A0000
+		const Poco::Net::Context::Ptr context = new Poco::Net::Context(Poco::Net::Context::TLS_CLIENT_USE, "", (_serverCertificateVerification) ? Poco::Net::Context::VERIFY_RELAXED : Poco::Net::Context::VERIFY_NONE, 9, true);
+#else
+		const Poco::Net::Context::Ptr context = new Poco::Net::Context(Poco::Net::Context::TLSV1_2_CLIENT_USE, "", (_serverCertificateVerification) ? Poco::Net::Context::VERIFY_RELAXED : Poco::Net::Context::VERIFY_NONE, 9, true);
+#endif
 		httpClientSession_ = new Poco::Net::HTTPSClientSession(hostName, port, context);
 	} else {
 		httpClientSession_ = new Poco::Net::HTTPClientSession(hostName, port);
@@ -107,7 +112,9 @@ void Hrp__::connect_(const std::string& serverURL, const std::string& proxyServe
 	if (connectTimeout == 0) {
 		connectTimeout = 60000;
 	}
-	httpClientSession_->setTimeout(Poco::Timespan(connectTimeout / 1000, (connectTimeout % 1000) * 1000));
+	httpClientSession_->setTimeout(Poco::Timespan(connectTimeout / 1000, (connectTimeout % 1000) * 1000),
+								   Poco::Timespan(connectTimeout / 1000, (connectTimeout % 1000) * 1000),
+								   Poco::Timespan(receiveTimeout / 1000, (receiveTimeout % 1000) * 1000));
 }
 
 void Hrp__::disconnect_() /* override */ {

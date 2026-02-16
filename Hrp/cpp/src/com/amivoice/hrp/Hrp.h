@@ -6,7 +6,7 @@
 
 #if defined(_WIN32)
  #if defined(_USRDLL)
-  #define HRP_API _declspec(dllexport)
+  #define HRP_API __declspec(dllexport)
  #else
   #define HRP_API __declspec(dllimport)
  #endif
@@ -30,7 +30,7 @@ class HRP_API Hrp {
 	private: static const char* VERSION;
 
 	public: static const char* getVersion();
-	public: static Hrp* construct(int implementation = 1);
+	public: static Hrp* construct(int implementation = 0);
 
 #if defined(_USRDLL)
 	private: HrpListener* listener_;
@@ -39,11 +39,19 @@ class HRP_API Hrp {
 	private: int connectTimeout_;
 	private: int receiveTimeout_;
 	private: std::string grammarFileNames_;
+	private: std::string mode_;
 	private: std::string profileId_;
 	private: std::string profileWords_;
+	private: std::string segmenterType_;
 	private: std::string segmenterProperties_;
 	private: std::string keepFillerToken_;
 	private: std::string resultUpdatedInterval_;
+	private: std::string maxDecodingTime_;
+	private: std::string maxResponseTime_;
+	private: std::string maxDecodingRate_;
+	private: std::string targetResponseTime_;
+	private: std::string targetDecodingRate_;
+	private: std::string recognitionTimeout_;
 	private: std::string extension_;
 	private: std::string authorization_;
 	private: std::string domainId_;
@@ -67,11 +75,19 @@ class HRP_API Hrp {
 	public: void setConnectTimeout(int connectTimeout);
 	public: void setReceiveTimeout(int receiveTimeout);
 	public: void setGrammarFileNames(const char* grammarFileNames);
+	public: void setMode(const char* mode);
 	public: void setProfileId(const char* profileId);
 	public: void setProfileWords(const char* profileWords);
+	public: void setSegmenterType(const char* segmenterType);
 	public: void setSegmenterProperties(const char* segmenterProperties);
 	public: void setKeepFillerToken(const char* keepFillerToken);
 	public: void setResultUpdatedInterval(const char* resultUpdatedInterval);
+	public: void setMaxDecodingTime(const char* maxDecodingTime);
+	public: void setMaxResponseTime(const char* maxResponseTime);
+	public: void setMaxDecodingRate(const char* maxDecodingRate);
+	public: void setTargetResponseTime(const char* targetResponseTime);
+	public: void setTargetDecodingRate(const char* targetDecodingRate);
+	public: void setRecognitionTimeout(const char* recognitionTimeout);
 	public: void setExtension(const char* extension);
 	public: void setAuthorization(const char* authorization);
 	public: void setDomainId(const char* domainId);

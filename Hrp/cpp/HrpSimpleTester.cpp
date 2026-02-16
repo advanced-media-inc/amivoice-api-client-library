@@ -506,7 +506,29 @@ class HrpSimpleTester : private com::amivoice::hrp::HrpListener {
 					return NULL;
 				}
 			} else {
-				buffer[bufferLength++] = (unsigned short)(char)c;
+				if ((c & 0x80) == 0x00) {
+					// 1 バイト文字 0yyyyyyy → 00000000 0yyyyyyy
+					buffer[bufferLength++] = c;
+				} else
+				if ((c & 0xE0) == 0xC0) {
+					// 2 バイト文字 110xxxyy 10yyyyyy → 00000xxx yyyyyyyy
+					int c1 = (index >= resultLength) ? 0 : result[index++];
+					buffer[bufferLength++] = (unsigned short)(((c << 6) & 0x07C0) | (c1 & 0x3F));
+				} else
+				if ((c & 0xF0) == 0xE0) {
+					// 3 バイト文字 1110xxxx 10xxxxyy 10yyyyyy → xxxxxxxx yyyyyyyy
+					int c1 = (index >= resultLength) ? 0 : result[index++];
+					int c2 = (index >= resultLength) ? 0 : result[index++];
+					buffer[bufferLength++] = (unsigned short)(((c << 12) & 0xF000) | ((c1 << 6) & 0x0FC0) | (c2 & 0x3F));
+				} else
+				if ((c & 0xF8) == 0xF0) {
+					// 4 バイト文字 11110zzz 10zzxxxx 10xxxxyy 10yyyyyy → 110110ZZ ZZxxxxxx 110111xx yyyyyyyy
+					int c1 = (index >= resultLength) ? 0 : result[index++];
+					int c2 = (index >= resultLength) ? 0 : result[index++];
+					int c3 = (index >= resultLength) ? 0 : result[index++];
+					buffer[bufferLength++] = (unsigned short)(0xD800 | ((((((c << 2) & 0x1C) | ((c1 >> 4) & 0x03)) - 1) << 6) & 0x03C0) | ((c1 << 2) & 0x3C) | ((c2 >> 4) & 0x03));
+					buffer[bufferLength++] = (unsigned short)(0xDC00 | (((c2 << 6) & 0x03C0) | (c3 & 0x3F)));
+				}
 			}
 			c = (index >= resultLength) ? 0 : result[index++];
 		}
