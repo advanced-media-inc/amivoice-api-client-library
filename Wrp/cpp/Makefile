@@ -11,7 +11,7 @@
 #
 # 依存関係:
 # - POCO C++ Libraries + OpenSSL のヘッダ/ライブラリが必要です。
-# - このリポジトリに同梱されているパッケージ(workspace/HrpWrp/*/_/_poco)があれば自動検出を試みます。
+# - このリポジトリに同梱されているパッケージがあれば自動検出を試みます。
 #   見つからない場合は、make 実行時に POCO_HOME を指定してください。
 #     例: make POCO_HOME=/path/to/_poco
 
@@ -67,8 +67,6 @@ LIB_OBJS := $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(LIB_SRCS))
 # ---- 依存ライブラリ（POCO/OpenSSL） ----
 # 同梱物の自動検出（見つからない場合は POCO_HOME を指定）
 POCO_HOME_AUTO := $(firstword \
-	$(wildcard ../../workspace/HrpWrp/*/_/_poco) \
-	$(wildcard ../../../workspace/HrpWrp/*/_/_poco) \
 	$(wildcard ../../_/_poco) \
 	$(wildcard ../../../_/_poco) \
 )
