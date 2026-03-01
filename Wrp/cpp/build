@@ -1,14 +1,15 @@
 #!/bin/bash
 set -eu
+NAME=Wrp
 echo ""
-echo "==== libWrp.so"
+echo "==== lib$NAME.so"
 echo ""
-(cd src; make -f Wrp.makefile)
+(cd src; make -f $NAME.makefile "$@")
 echo ""
-echo "==== WrpSimpleTester"
+echo "==== ${NAME}SimpleTester"
 echo ""
-make -f WrpSimpleTester.makefile
+make -f ${NAME}SimpleTester.makefile "$@"
 echo ""
-echo "==== WrpTester"
+echo "==== ${NAME}Tester"
 echo ""
-make -f WrpTester.makefile
+make -f ${NAME}Tester.makefile "$@"

@@ -47,6 +47,18 @@ class HrpTester implements com\amivoice\hrp\HrpListener {
 		$keepFillerToken = null;
 		// 認識中イベント発行間隔
 		$resultUpdatedInterval = null;
+		// 最大認識処理時間
+		$maxDecodingTime = null;
+		// 最大応答時間
+		$maxResponseTime = null;
+		// 最大認識処理割合
+		$maxDecodingRate = null;
+		// 目標応答時間
+		$targetResponseTime = null;
+		// 目標認識処理割合
+		$targetDecodingRate = null;
+		// 認識処理タイムアウト
+		$recognitionTimeout = null;
 		// 拡張情報
 		$extension = null;
 		// サービス認証キー文字列
@@ -80,7 +92,7 @@ class HrpTester implements com\amivoice\hrp\HrpListener {
 		// 詳細出力
 		$verbose = false;
 		// 実装タイプ
-		$implementation = 1;
+		$implementation = 0;
 
 		// 引数のチェック
 		foreach ($args as $arg) {
@@ -101,6 +113,24 @@ class HrpTester implements com\amivoice\hrp\HrpListener {
 			} else
 			if (strlen($arg) >= 3 && substr_compare($arg, "oi=", 0, 3) === 0) {
 				$resultUpdatedInterval = substr($arg, 3);
+			} else
+			if (strlen($arg) >= strlen("omdt=") && substr_compare($arg, "omdt=", 0, strlen("omdt=")) === 0) {
+				$maxDecodingTime = substr($arg, 5);
+			} else
+			if (strlen($arg) >= strlen("omrt=") && substr_compare($arg, "omrt=", 0, strlen("omrt=")) === 0) {
+				$maxResponseTime = substr($arg, 5);
+			} else
+			if (strlen($arg) >= strlen("omdr=") && substr_compare($arg, "omdr=", 0, strlen("omdr=")) === 0) {
+				$maxDecodingRate = substr($arg, 5);
+			} else
+			if (strlen($arg) >= strlen("otrt=") && substr_compare($arg, "otrt=", 0, strlen("otrt=")) === 0) {
+				$targetResponseTime = substr($arg, 5);
+			} else
+			if (strlen($arg) >= strlen("otdr=") && substr_compare($arg, "otdr=", 0, strlen("otdr=")) === 0) {
+				$targetDecodingRate = substr($arg, 5);
+			} else
+			if (strlen($arg) >= 3 && substr_compare($arg, "oo=", 0, 3) === 0) {
+				$recognitionTimeout = substr($arg, 3);
 			} else
 			if (strlen($arg) >= 3 && substr_compare($arg, "oe=", 0, 3) === 0) {
 				$extension = substr($arg, 3);
@@ -160,6 +190,9 @@ class HrpTester implements com\amivoice\hrp\HrpListener {
 			if (strlen($arg) >= 2 && substr_compare($arg, "-v", 0, 2) === 0) {
 				$verbose = true;
 			} else
+			if (strlen($arg) >= 2 && substr_compare($arg, "-1", 0, 2) === 0) {
+				$implementation = 1;
+			} else
 			if (strlen($arg) >= 2 && substr_compare($arg, "-2", 0, 2) === 0) {
 				$implementation = 2;
 			} else
@@ -183,6 +216,12 @@ class HrpTester implements com\amivoice\hrp\HrpListener {
 			p("  op=<segmenterProperties>");
 			p("  of=<keepFillerToken>");
 			p("  oi=<resultUpdatedInterval>");
+			p("  omdt=<maxDecodingTime>");
+			p("  omrt=<maxResponseTime>");
+			p("  omdr=<maxDecodingRate>");
+			p("  otrt=<targetResponseTime>");
+			p("  otdr=<targetDecodingRate>");
+			p("  oo=<recognitionTimeout>");
 			p("  oe=<extension>");
 			p("  ou=<authorization>");
 			p("  d=<domainId>");
@@ -253,6 +292,12 @@ class HrpTester implements com\amivoice\hrp\HrpListener {
 		$hrp->setSegmenterProperties($segmenterProperties);
 		$hrp->setKeepFillerToken($keepFillerToken);
 		$hrp->setResultUpdatedInterval($resultUpdatedInterval);
+		$hrp->setMaxDecodingTime($maxDecodingTime);
+		$hrp->setMaxResponseTime($maxResponseTime);
+		$hrp->setMaxDecodingRate($maxDecodingRate);
+		$hrp->setTargetResponseTime($targetResponseTime);
+		$hrp->setTargetDecodingRate($targetDecodingRate);
+		$hrp->setRecognitionTimeout($recognitionTimeout);
 		$hrp->setExtension($extension);
 		$hrp->setAuthorization($authorization);
 		$hrp->setDomainId($domainId);
@@ -329,10 +374,6 @@ class HrpTester implements com\amivoice\hrp\HrpListener {
 
 					// 音声データファイルの総バイト数の取得
 					$audioDataBytes = @filesize($audioFileName);
-					if ($audioDataBytes === false) {
-						p("音声データファイル " . $audioFileName . " の読み込みに失敗しました。");
-						break;
-					}
 
 					// HTTP 音声認識サーバへの音声データの送信の開始
 					if (!$hrp->feedDataResume($type, $audioDataBytes)) {
@@ -449,6 +490,9 @@ class HrpTester implements com\amivoice\hrp\HrpListener {
 	}
 
 	private function text_($result) {
+		if (strpos($result, ",\"text\":\"") === false) {
+			return null;
+		}
 		return json_decode($result, true)["text"];
 	}
 }

@@ -10,12 +10,15 @@ abstract class Wrp {
 
 	public static function getVersion() {
 		if (self::$VERSION === null) {
-			self::$VERSION = "Wrp/1.0.05 PHP/" . phpversion() . " (" . php_uname('s') . " " . php_uname('r') . " " . php_uname('v') . ")";
+			self::$VERSION = "Wrp/1.0.06 PHP/" . phpversion() . " (" . php_uname('s') . " " . php_uname('r') . " " . php_uname('v') . ")";
 		}
 		return self::$VERSION;
 	}
 
-	public static function construct($implementation = 1) {
+	public static function construct($implementation = 0) {
+		if ($implementation === 0) {
+			$implementation = 1; // default implementation
+		}
 		if ($implementation === 1) {
 			return new Wrp_();
 		} else {
@@ -29,11 +32,20 @@ abstract class Wrp {
 	private $connectTimeout_;
 	private $receiveTimeout_;
 	private $grammarFileNames_;
+	private $mode_;
 	private $profileId_;
 	private $profileWords_;
+	private $segmenterType_;
 	private $segmenterProperties_;
 	private $keepFillerToken_;
 	private $resultUpdatedInterval_;
+	private $maxDecodingTime_;
+	private $maxResponseTime_;
+	private $maxDecodingRate_;
+	private $targetResponseTime_;
+	private $targetDecodingRate_;
+	private $noInputTimeout_;
+	private $recognitionTimeout_;
 	private $extension_;
 	private $authorization_;
 	private $codec_;
@@ -49,16 +61,25 @@ abstract class Wrp {
 		$this->connectTimeout_ = 0;
 		$this->receiveTimeout_ = 0;
 		$this->grammarFileNames_ = null;
+		$this->mode_ = null;
 		$this->profileId_ = null;
 		$this->profileWords_ = null;
+		$this->segmenterType_ = null;
 		$this->segmenterProperties_ = null;
 		$this->keepFillerToken_ = null;
 		$this->resultUpdatedInterval_ = null;
+		$this->maxDecodingTime_ = null;
+		$this->maxResponseTime_ = null;
+		$this->maxDecodingRate_ = null;
+		$this->targetResponseTime_ = null;
+		$this->targetDecodingRate_ = null;
+		$this->noInputTimeout_ = null;
+		$this->recognitionTimeout_ = null;
 		$this->extension_ = null;
 		$this->authorization_ = null;
 		$this->codec_ = null;
 		$this->resultType_ = null;
-		$this->state_ = 0;
+		$this->state_ = -1;
 		$this->lastMessage_ = "";
 		$this->waitingResults_ = 0;
 	}
@@ -95,12 +116,20 @@ abstract class Wrp {
 		$this->grammarFileNames_ = $grammarFileNames;
 	}
 
+	public function setMode($mode) {
+		$this->mode_ = $mode;
+	}
+
 	public function setProfileId($profileId) {
 		$this->profileId_ = $profileId;
 	}
 
 	public function setProfileWords($profileWords) {
 		$this->profileWords_ = $profileWords;
+	}
+
+	public function setSegmenterType($segmenterType) {
+		$this->segmenterType_ = $segmenterType;
 	}
 
 	public function setSegmenterProperties($segmenterProperties) {
@@ -113,6 +142,34 @@ abstract class Wrp {
 
 	public function setResultUpdatedInterval($resultUpdatedInterval) {
 		$this->resultUpdatedInterval_ = $resultUpdatedInterval;
+	}
+
+	public function setMaxDecodingTime($maxDecodingTime) {
+		$this->maxDecodingTime_ = $maxDecodingTime;
+	}
+
+	public function setMaxResponseTime($maxResponseTime) {
+		$this->maxResponseTime_ = $maxResponseTime;
+	}
+
+	public function setMaxDecodingRate($maxDecodingRate) {
+		$this->maxDecodingRate_ = $maxDecodingRate;
+	}
+
+	public function setTargetResponseTime($targetResponseTime) {
+		$this->targetResponseTime_ = $targetResponseTime;
+	}
+
+	public function setTargetDecodingRate($targetDecodingRate) {
+		$this->targetDecodingRate_ = $targetDecodingRate;
+	}
+
+	public function setNoInputTimeout($noInputTimeout) {
+		$this->noInputTimeout_ = $noInputTimeout;
+	}
+
+	public function setRecognitionTimeout($recognitionTimeout) {
+		$this->recognitionTimeout_ = $recognitionTimeout;
 	}
 
 	public function setExtension($extension) {
@@ -134,6 +191,18 @@ abstract class Wrp {
 	public function setServiceAuthorization($serviceAuthorization) {
 		if ($serviceAuthorization !== null) {
 			$this->authorization_ = $serviceAuthorization;
+		}
+	}
+
+	public function setVoiceDetection($voiceDetection) {
+		if ($voiceDetection !== null) {
+			$this->segmenterType_ = "G4";
+			$this->segmenterProperties_ = $voiceDetection;
+			if (strlen($voiceDetection) > 3 && $voiceDetection[0] === 'G'
+											&& $voiceDetection[2] === ' ') {
+				$this->segmenterType_ = substr($voiceDetection, 0, 2);
+				$this->segmenterProperties_ = substr($voiceDetection, 3);
+			}
 		}
 	}
 
@@ -161,6 +230,7 @@ abstract class Wrp {
 			if ($this->listener_ !== null) {
 				$this->listener_->TRACE($this->lastMessage_);
 			}
+			$this->state_ = -1;
 			$this->disconnect_();
 			return false;
 		}
@@ -181,6 +251,7 @@ abstract class Wrp {
 			}
 			return false;
 		}
+		$this->state_ = -1;
 		$this->disconnect_();
 		$this->lastMessage_ = "INFO: disconnected from WebSocket server";
 		if ($this->listener_ !== null) {
@@ -229,6 +300,16 @@ abstract class Wrp {
 			} else {
 				$command .= " \001";
 			}
+			if ($this->mode_ !== null) {
+				$command .= " mode=";
+				if (strpos($this->mode_, ' ') !== false) {
+					$command .= '"';
+					$command .= $this->mode_;
+					$command .= '"';
+				} else {
+					$command .= $this->mode_;
+				}
+			}
 			if ($this->profileId_ !== null) {
 				$command .= " profileId=";
 				if (strpos($this->profileId_, ' ') !== false) {
@@ -247,6 +328,16 @@ abstract class Wrp {
 					$command .= '"';
 				} else {
 					$command .= $this->profileWords_;
+				}
+			}
+			if ($this->segmenterType_ !== null) {
+				$command .= " segmenterType=";
+				if (strpos($this->segmenterType_, ' ') !== false) {
+					$command .= '"';
+					$command .= $this->segmenterType_;
+					$command .= '"';
+				} else {
+					$command .= $this->segmenterType_;
 				}
 			}
 			if ($this->segmenterProperties_ !== null) {
@@ -277,6 +368,76 @@ abstract class Wrp {
 					$command .= '"';
 				} else {
 					$command .= $this->resultUpdatedInterval_;
+				}
+			}
+			if ($this->maxDecodingTime_ !== null) {
+				$command .= " maxDecodingTime=";
+				if (strpos($this->maxDecodingTime_, ' ') !== false) {
+					$command .= '"';
+					$command .= $this->maxDecodingTime_;
+					$command .= '"';
+				} else {
+					$command .= $this->maxDecodingTime_;
+				}
+			}
+			if ($this->maxResponseTime_ !== null) {
+				$command .= " maxResponseTime=";
+				if (strpos($this->maxResponseTime_, ' ') !== false) {
+					$command .= '"';
+					$command .= $this->maxResponseTime_;
+					$command .= '"';
+				} else {
+					$command .= $this->maxResponseTime_;
+				}
+			}
+			if ($this->maxDecodingRate_ !== null) {
+				$command .= " maxDecodingRate=";
+				if (strpos($this->maxDecodingRate_, ' ') !== false) {
+					$command .= '"';
+					$command .= $this->maxDecodingRate_;
+					$command .= '"';
+				} else {
+					$command .= $this->maxDecodingRate_;
+				}
+			}
+			if ($this->targetResponseTime_ !== null) {
+				$command .= " targetResponseTime=";
+				if (strpos($this->targetResponseTime_, ' ') !== false) {
+					$command .= '"';
+					$command .= $this->targetResponseTime_;
+					$command .= '"';
+				} else {
+					$command .= $this->targetResponseTime_;
+				}
+			}
+			if ($this->targetDecodingRate_ !== null) {
+				$command .= " targetDecodingRate=";
+				if (strpos($this->targetDecodingRate_, ' ') !== false) {
+					$command .= '"';
+					$command .= $this->targetDecodingRate_;
+					$command .= '"';
+				} else {
+					$command .= $this->targetDecodingRate_;
+				}
+			}
+			if ($this->noInputTimeout_ !== null) {
+				$command .= " noInputTimeout=";
+				if (strpos($this->noInputTimeout_, ' ') !== false) {
+					$command .= '"';
+					$command .= $this->noInputTimeout_;
+					$command .= '"';
+				} else {
+					$command .= $this->noInputTimeout_;
+				}
+			}
+			if ($this->recognitionTimeout_ !== null) {
+				$command .= " recognitionTimeout=";
+				if (strpos($this->recognitionTimeout_, ' ') !== false) {
+					$command .= '"';
+					$command .= $this->recognitionTimeout_;
+					$command .= '"';
+				} else {
+					$command .= $this->recognitionTimeout_;
 				}
 			}
 			if ($this->extension_ !== null) {
@@ -316,7 +477,7 @@ abstract class Wrp {
 				while ($this->state_ === 1) {
 					$this->checkResponse_(-1);
 				}
-				if ($this->state_ === 5) {
+				if ($this->state_ !== 2) {
 					return false;
 				}
 			} catch (\Exception $e) {
@@ -383,7 +544,7 @@ abstract class Wrp {
 				while ($this->state_ === 4) {
 					$this->checkResponse_(-1);
 				}
-				if ($this->state_ === 5) {
+				if ($this->state_ !== 0) {
 					return false;
 				}
 			} catch (\Exception $e) {
@@ -424,11 +585,15 @@ abstract class Wrp {
 	}
 
 	protected function onClose_() {
+		/* synchronized ($this) */ {
+			$this->state_ = 0;
+			//notifyAll();
+		}
 	}
 
 	protected function onError_($cause) {
 		/* synchronized ($this) */ {
-			if ($this->state_ === 5) {
+			if ($this->state_ === -1 || $this->state_ === 0 || $this->state_ === 5) {
 				return;
 			}
 			$this->lastMessage_ = "ERROR: caught exception (" . $cause->getMessage() . ")";

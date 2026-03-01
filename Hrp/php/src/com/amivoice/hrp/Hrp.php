@@ -10,12 +10,15 @@ abstract class Hrp {
 
 	public static function getVersion() {
 		if (self::$VERSION === null) {
-			self::$VERSION = "Hrp/1.0.05 PHP/" . phpversion() . " (" . php_uname('s') . " " . php_uname('r') . " " . php_uname('v') . ")";
+			self::$VERSION = "Hrp/1.0.06 PHP/" . phpversion() . " (" . php_uname('s') . " " . php_uname('r') . " " . php_uname('v') . ")";
 		}
 		return self::$VERSION;
 	}
 
-	public static function construct($implementation = 1) {
+	public static function construct($implementation = 0) {
+		if ($implementation === 0) {
+			$implementation = 1; // default implementation
+		}
 		if ($implementation === 1) {
 			return new Hrp_();
 		} else {
@@ -29,11 +32,19 @@ abstract class Hrp {
 	private $connectTimeout_;
 	private $receiveTimeout_;
 	private $grammarFileNames_;
+	private $mode_;
 	private $profileId_;
 	private $profileWords_;
+	private $segmenterType_;
 	private $segmenterProperties_;
 	private $keepFillerToken_;
 	private $resultUpdatedInterval_;
+	private $maxDecodingTime_;
+	private $maxResponseTime_;
+	private $maxDecodingRate_;
+	private $targetResponseTime_;
+	private $targetDecodingRate_;
+	private $recognitionTimeout_;
 	private $extension_;
 	private $authorization_;
 	private $domainId_;
@@ -55,11 +66,19 @@ abstract class Hrp {
 		$this->connectTimeout_ = 0;
 		$this->receiveTimeout_ = 0;
 		$this->grammarFileNames_ = null;
+		$this->mode_ = null;
 		$this->profileId_ = null;
 		$this->profileWords_ = null;
+		$this->segmenterType_ = null;
 		$this->segmenterProperties_ = null;
 		$this->keepFillerToken_ = null;
 		$this->resultUpdatedInterval_ = null;
+		$this->maxDecodingTime_ = null;
+		$this->maxResponseTime_ = null;
+		$this->maxDecodingRate_ = null;
+		$this->targetResponseTime_ = null;
+		$this->targetDecodingRate_ = null;
+		$this->recognitionTimeout_ = null;
 		$this->extension_ = null;
 		$this->authorization_ = null;
 		$this->domainId_ = null;
@@ -71,7 +90,7 @@ abstract class Hrp {
 		$this->acceptTopic_ = null;
 		$this->contentType_ = null;
 		$this->accept_ = null;
-		$this->state_ = 0;
+		$this->state_ = -1;
 		$this->lastMessage_ = "";
 	}
 
@@ -99,12 +118,20 @@ abstract class Hrp {
 		$this->grammarFileNames_ = $grammarFileNames;
 	}
 
+	public function setMode($mode) {
+		$this->mode_ = $mode;
+	}
+
 	public function setProfileId($profileId) {
 		$this->profileId_ = $profileId;
 	}
 
 	public function setProfileWords($profileWords) {
 		$this->profileWords_ = $profileWords;
+	}
+
+	public function setSegmenterType($segmenterType) {
+		$this->segmenterType_ = $segmenterType;
 	}
 
 	public function setSegmenterProperties($segmenterProperties) {
@@ -117,6 +144,30 @@ abstract class Hrp {
 
 	public function setResultUpdatedInterval($resultUpdatedInterval) {
 		$this->resultUpdatedInterval_ = $resultUpdatedInterval;
+	}
+
+	public function setMaxDecodingTime($maxDecodingTime) {
+		$this->maxDecodingTime_ = $maxDecodingTime;
+	}
+
+	public function setMaxResponseTime($maxResponseTime) {
+		$this->maxResponseTime_ = $maxResponseTime;
+	}
+
+	public function setMaxDecodingRate($maxDecodingRate) {
+		$this->maxDecodingRate_ = $maxDecodingRate;
+	}
+
+	public function setTargetResponseTime($targetResponseTime) {
+		$this->targetResponseTime_ = $targetResponseTime;
+	}
+
+	public function setTargetDecodingRate($targetDecodingRate) {
+		$this->targetDecodingRate_ = $targetDecodingRate;
+	}
+
+	public function setRecognitionTimeout($recognitionTimeout) {
+		$this->recognitionTimeout_ = $recognitionTimeout;
 	}
 
 	public function setExtension($extension) {
@@ -186,6 +237,7 @@ abstract class Hrp {
 			if ($this->listener_ !== null) {
 				$this->listener_->TRACE($this->lastMessage_);
 			}
+			$this->state_ = -1;
 			$this->disconnect_();
 			return false;
 		}
@@ -206,6 +258,7 @@ abstract class Hrp {
 			}
 			return false;
 		}
+		$this->state_ = -1;
 		$this->disconnect_();
 		$this->lastMessage_ = "INFO: disconnected from HTTP server";
 		if ($this->listener_ !== null) {
@@ -274,6 +327,13 @@ abstract class Hrp {
 					$domainId .= "grammarFileNames=";
 					$domainId .= rawurlencode($this->grammarFileNames_);
 				}
+				if ($this->mode_ !== null) {
+					if ($domainId !== "") {
+						$domainId .= ' ';
+					}
+					$domainId .= "mode=";
+					$domainId .= rawurlencode($this->mode_);
+				}
 				if ($this->profileId_ !== null) {
 					if ($domainId !== "") {
 						$domainId .= ' ';
@@ -287,6 +347,13 @@ abstract class Hrp {
 					}
 					$domainId .= "profileWords=";
 					$domainId .= rawurlencode($this->profileWords_);
+				}
+				if ($this->segmenterType_ !== null) {
+					if ($domainId !== "") {
+						$domainId .= ' ';
+					}
+					$domainId .= "segmenterType=";
+					$domainId .= rawurlencode($this->segmenterType_);
 				}
 				if ($this->segmenterProperties_ !== null) {
 					if ($domainId !== "") {
@@ -308,6 +375,48 @@ abstract class Hrp {
 					}
 					$domainId .= "resultUpdatedInterval=";
 					$domainId .= rawurlencode($this->resultUpdatedInterval_);
+				}
+				if ($this->maxDecodingTime_ !== null) {
+					if ($domainId !== "") {
+						$domainId .= ' ';
+					}
+					$domainId .= "maxDecodingTime=";
+					$domainId .= rawurlencode($this->maxDecodingTime_);
+				}
+				if ($this->maxResponseTime_ !== null) {
+					if ($domainId !== "") {
+						$domainId .= ' ';
+					}
+					$domainId .= "maxResponseTime=";
+					$domainId .= rawurlencode($this->maxResponseTime_);
+				}
+				if ($this->maxDecodingRate_ !== null) {
+					if ($domainId !== "") {
+						$domainId .= ' ';
+					}
+					$domainId .= "maxDecodingRate=";
+					$domainId .= rawurlencode($this->maxDecodingRate_);
+				}
+				if ($this->targetResponseTime_ !== null) {
+					if ($domainId !== "") {
+						$domainId .= ' ';
+					}
+					$domainId .= "targetResponseTime=";
+					$domainId .= rawurlencode($this->targetResponseTime_);
+				}
+				if ($this->targetDecodingRate_ !== null) {
+					if ($domainId !== "") {
+						$domainId .= ' ';
+					}
+					$domainId .= "targetDecodingRate=";
+					$domainId .= rawurlencode($this->targetDecodingRate_);
+				}
+				if ($this->recognitionTimeout_ !== null) {
+					if ($domainId !== "") {
+						$domainId .= ' ';
+					}
+					$domainId .= "recognitionTimeout=";
+					$domainId .= rawurlencode($this->recognitionTimeout_);
 				}
 				if ($this->extension_ !== null) {
 					if ($domainId !== "") {
@@ -469,7 +578,7 @@ abstract class Hrp {
 
 	protected function onError_($cause) {
 		/* synchronized ($this) */ {
-			if ($this->state_ === 5) {
+			if ($this->state_ === -1 || $this->state_ === 0 || $this->state_ === 5) {
 				return;
 			}
 			$this->lastMessage_ = "ERROR: caught exception (" . $cause->getMessage() . ")";

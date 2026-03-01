@@ -3,7 +3,7 @@ package com.amivoice.wrp;
 import java.io.*;
 
 public abstract class Wrp {
-	private static final String VERSION = "Wrp/1.0.05 Java/" + System.getProperty("java.version") + " (" + System.getProperty("os.name") + " " + System.getProperty("os.version") + ")";
+	private static final String VERSION = "Wrp/1.0.06 Java/" + System.getProperty("java.version") + " (" + System.getProperty("os.name") + " " + System.getProperty("os.version") + ")";
 
 	public static String getVersion() {
 		return VERSION;
@@ -14,6 +14,9 @@ public abstract class Wrp {
 	}
 
 	public static Wrp construct(int implementation) {
+		if (implementation == 0) {
+			implementation = 1; // default implementation
+		}
 		try {
 			if (implementation == 1) {
 				return (Wrp)Class.forName("com.amivoice.wrp.Wrp_").getDeclaredConstructor().newInstance();
@@ -44,6 +47,13 @@ public abstract class Wrp {
 	private String segmenterProperties_;
 	private String keepFillerToken_;
 	private String resultUpdatedInterval_;
+	private String maxDecodingTime_;
+	private String maxResponseTime_;
+	private String maxDecodingRate_;
+	private String targetResponseTime_;
+	private String targetDecodingRate_;
+	private String noInputTimeout_;
+	private String recognitionTimeout_;
 	private String extension_;
 	private String authorization_;
 	private String codec_;
@@ -66,11 +76,18 @@ public abstract class Wrp {
 		segmenterProperties_ = null;
 		keepFillerToken_ = null;
 		resultUpdatedInterval_ = null;
+		maxDecodingTime_ = null;
+		maxResponseTime_ = null;
+		maxDecodingRate_ = null;
+		targetResponseTime_ = null;
+		targetDecodingRate_ = null;
+		noInputTimeout_ = null;
+		recognitionTimeout_ = null;
 		extension_ = null;
 		authorization_ = null;
 		codec_ = null;
 		resultType_ = null;
-		state_ = 0;
+		state_ = -1;
 		lastMessage_ = "";
 		waitingResults_ = 0;
 	}
@@ -135,6 +152,34 @@ public abstract class Wrp {
 		resultUpdatedInterval_ = resultUpdatedInterval;
 	}
 
+	public void setMaxDecodingTime(String maxDecodingTime) {
+		maxDecodingTime_ = maxDecodingTime;
+	}
+
+	public void setMaxResponseTime(String maxResponseTime) {
+		maxResponseTime_ = maxResponseTime;
+	}
+
+	public void setMaxDecodingRate(String maxDecodingRate) {
+		maxDecodingRate_ = maxDecodingRate;
+	}
+
+	public void setTargetResponseTime(String targetResponseTime) {
+		targetResponseTime_ = targetResponseTime;
+	}
+
+	public void setTargetDecodingRate(String targetDecodingRate) {
+		targetDecodingRate_ = targetDecodingRate;
+	}
+
+	public void setNoInputTimeout(String noInputTimeout) {
+		noInputTimeout_ = noInputTimeout;
+	}
+
+	public void setRecognitionTimeout(String recognitionTimeout) {
+		recognitionTimeout_ = recognitionTimeout;
+	}
+
 	public void setExtension(String extension) {
 		extension_ = extension;
 	}
@@ -193,6 +238,7 @@ public abstract class Wrp {
 			if (listener_ != null) {
 				listener_.TRACE(lastMessage_);
 			}
+			state_ = -1;
 			disconnect_();
 			return false;
 		}
@@ -213,6 +259,7 @@ public abstract class Wrp {
 			}
 			return false;
 		}
+		state_ = -1;
 		disconnect_();
 		lastMessage_ = "INFO: disconnected from WebSocket server";
 		if (listener_ != null) {
@@ -331,6 +378,76 @@ public abstract class Wrp {
 					command.append(resultUpdatedInterval_);
 				}
 			}
+			if (maxDecodingTime_ != null) {
+				command.append(" maxDecodingTime=");
+				if (maxDecodingTime_.indexOf(' ') != -1) {
+					command.append('"');
+					command.append(maxDecodingTime_);
+					command.append('"');
+				} else {
+					command.append(maxDecodingTime_);
+				}
+			}
+			if (maxResponseTime_ != null) {
+				command.append(" maxResponseTime=");
+				if (maxResponseTime_.indexOf(' ') != -1) {
+					command.append('"');
+					command.append(maxResponseTime_);
+					command.append('"');
+				} else {
+					command.append(maxResponseTime_);
+				}
+			}
+			if (maxDecodingRate_ != null) {
+				command.append(" maxDecodingRate=");
+				if (maxDecodingRate_.indexOf(' ') != -1) {
+					command.append('"');
+					command.append(maxDecodingRate_);
+					command.append('"');
+				} else {
+					command.append(maxDecodingRate_);
+				}
+			}
+			if (targetResponseTime_ != null) {
+				command.append(" targetResponseTime=");
+				if (targetResponseTime_.indexOf(' ') != -1) {
+					command.append('"');
+					command.append(targetResponseTime_);
+					command.append('"');
+				} else {
+					command.append(targetResponseTime_);
+				}
+			}
+			if (targetDecodingRate_ != null) {
+				command.append(" targetDecodingRate=");
+				if (targetDecodingRate_.indexOf(' ') != -1) {
+					command.append('"');
+					command.append(targetDecodingRate_);
+					command.append('"');
+				} else {
+					command.append(targetDecodingRate_);
+				}
+			}
+			if (noInputTimeout_ != null) {
+				command.append(" noInputTimeout=");
+				if (noInputTimeout_.indexOf(' ') != -1) {
+					command.append('"');
+					command.append(noInputTimeout_);
+					command.append('"');
+				} else {
+					command.append(noInputTimeout_);
+				}
+			}
+			if (recognitionTimeout_ != null) {
+				command.append(" recognitionTimeout=");
+				if (recognitionTimeout_.indexOf(' ') != -1) {
+					command.append('"');
+					command.append(recognitionTimeout_);
+					command.append('"');
+				} else {
+					command.append(recognitionTimeout_);
+				}
+			}
 			if (extension_ != null) {
 				command.append(" extension=");
 				if (extension_.indexOf(' ') != -1 || extension_.indexOf('\"') != -1) {
@@ -368,7 +485,7 @@ public abstract class Wrp {
 				while (state_ == 1) {
 					wait();
 				}
-				if (state_ == 5) {
+				if (state_ != 2) {
 					return false;
 				}
 			} catch (InterruptedException e) {
@@ -441,7 +558,7 @@ public abstract class Wrp {
 				while (state_ == 4) {
 					wait();
 				}
-				if (state_ == 5) {
+				if (state_ != 0) {
 					return false;
 				}
 			} catch (InterruptedException e) {
@@ -481,11 +598,15 @@ public abstract class Wrp {
 	}
 
 	protected void onClose_() {
+		synchronized (this) {
+			state_ = 0;
+			notifyAll();
+		}
 	}
 
 	protected void onError_(Throwable cause) {
 		synchronized (this) {
-			if (state_ == 5) {
+			if (state_ == -1 || state_ == 0 || state_ == 5) {
 				return;
 			}
 			lastMessage_ = "ERROR: caught exception (" + cause.getMessage() + ")";

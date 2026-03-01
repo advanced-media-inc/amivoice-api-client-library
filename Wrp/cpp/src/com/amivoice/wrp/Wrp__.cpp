@@ -3,6 +3,7 @@
 #include "Poco/SynchronizedObject.h"
 #include "Poco/Thread.h"
 #include "Poco/Timespan.h"
+#include "Poco/Version.h"
 #include "Poco/Net/Context.h"
 #include "Poco/Net/HTTPClientSession.h"
 #include "Poco/Net/HTTPSClientSession.h"
@@ -98,7 +99,11 @@ void Wrp__::connect_(const std::string& serverURL, const std::string& proxyServe
 		}
 	}
 	if (scheme == "wss") {
-		const Poco::Net::Context::Ptr context = new Poco::Net::Context(Poco::Net::Context::TLSV1_2_CLIENT_USE, "", "", "", (_serverCertificateVerification) ? Poco::Net::Context::VERIFY_RELAXED : Poco::Net::Context::VERIFY_NONE, 9, true);
+#if POCO_VERSION >= 0x010A0000
+		const Poco::Net::Context::Ptr context = new Poco::Net::Context(Poco::Net::Context::TLS_CLIENT_USE, "", (_serverCertificateVerification) ? Poco::Net::Context::VERIFY_RELAXED : Poco::Net::Context::VERIFY_NONE, 9, true);
+#else
+		const Poco::Net::Context::Ptr context = new Poco::Net::Context(Poco::Net::Context::TLSV1_2_CLIENT_USE, "", (_serverCertificateVerification) ? Poco::Net::Context::VERIFY_RELAXED : Poco::Net::Context::VERIFY_NONE, 9, true);
+#endif
 		Poco::Net::HTTPSClientSession httpClientSession(hostName, port, context);
 		if (proxyServerName != NULL_STRING) {
 			httpClientSession.setProxy(proxyHostName, proxyPort);
@@ -129,6 +134,8 @@ void Wrp__::connect_(const std::string& serverURL, const std::string& proxyServe
 		Poco::Net::HTTPResponse httpResponse;
 		webSocket_ = new Poco::Net::WebSocket(httpClientSession, httpRequest, httpResponse);
 	}
+	webSocket_->setReceiveTimeout(Poco::Timespan(receiveTimeout / 1000, (receiveTimeout % 1000) * 1000));
+	webSocket_->setBlocking(false);
 	thread_ = new Poco::Thread();
 	thread_->start(*this);
 }
@@ -137,7 +144,7 @@ void Wrp__::disconnect_() /* override */ {
 	if (webSocket_ != NULL) {
 		try {
 			webSocket_->shutdown();
-		} catch (Poco::Exception& e) {}
+		} catch (Poco::Exception& /* e */) {}
 	}
 	if (thread_ != NULL) {
 		thread_->join();
@@ -200,7 +207,11 @@ Poco::SynchronizedObject* Wrp__::synchronizedObject_() /* override */ {
 bool Wrp__::receiveResponse_() {
 	int flags = 0;
 	int inDataBytes = webSocket_->receiveFrame((void*)&inData_[0], (int)inData_.size(), flags);
-	if (inDataBytes <= 0) {
+	while (inDataBytes < 0) {
+		Poco::Thread::sleep(1);
+		inDataBytes = webSocket_->receiveFrame((void*)&inData_[0], (int)inData_.size(), flags);
+	}
+	if (inDataBytes == 0) {
 		return false;
 	}
 	if (inDataBytes > 0 && inData_[inDataBytes - 1] == '\n') {

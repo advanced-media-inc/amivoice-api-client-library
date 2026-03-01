@@ -8,17 +8,17 @@ using System.Threading;
 #if !UNITY_2018_4_OR_NEWER
 [assembly: AssemblyTitle("Wrp")]
 [assembly: AssemblyProduct("Wrp")]
-[assembly: AssemblyCopyright("Copyright (C) 2019-2023 Advanced Media, Inc.")]
+[assembly: AssemblyCopyright("Copyright (C) 2019-2025 Advanced Media, Inc.")]
 [assembly: ComVisible(false)]
 [assembly: Guid("d605a501-80ec-4f48-a8fb-2a70e627a256")]
-[assembly: AssemblyVersion("1.0.05")]
-[assembly: AssemblyFileVersion("1.0.05")]
+[assembly: AssemblyVersion("1.0.06")]
+[assembly: AssemblyFileVersion("1.0.06")]
 #endif
 
 namespace com.amivoice.wrp {
 
 public abstract class Wrp {
-	private static string VERSION = "Wrp/1.0.05 CLR/" + System.Environment.Version.ToString() + " (" + System.Environment.OSVersion.ToString() + ")";
+	private static string VERSION = "Wrp/1.0.06 CLR/" + System.Environment.Version.ToString() + " (" + System.Environment.OSVersion.ToString() + ")";
 
 	public static string getVersion() {
 		return VERSION;
@@ -29,6 +29,9 @@ public abstract class Wrp {
 	}
 
 	public static Wrp construct(int implementation) {
+		if (implementation == 0) {
+			implementation = 1; // default implementation
+		}
 		if (implementation == 1) {
 			return new Wrp_();
 		} else {
@@ -42,11 +45,20 @@ public abstract class Wrp {
 	private int connectTimeout_;
 	private int receiveTimeout_;
 	private string grammarFileNames_;
+	private string mode_;
 	private string profileId_;
 	private string profileWords_;
+	private string segmenterType_;
 	private string segmenterProperties_;
 	private string keepFillerToken_;
 	private string resultUpdatedInterval_;
+	private string maxDecodingTime_;
+	private string maxResponseTime_;
+	private string maxDecodingRate_;
+	private string targetResponseTime_;
+	private string targetDecodingRate_;
+	private string noInputTimeout_;
+	private string recognitionTimeout_;
 	private string extension_;
 	private string authorization_;
 	private string codec_;
@@ -62,16 +74,25 @@ public abstract class Wrp {
 		connectTimeout_ = 0;
 		receiveTimeout_ = 0;
 		grammarFileNames_ = null;
+		mode_ = null;
 		profileId_ = null;
 		profileWords_ = null;
+		segmenterType_ = null;
 		segmenterProperties_ = null;
 		keepFillerToken_ = null;
 		resultUpdatedInterval_ = null;
+		maxDecodingTime_ = null;
+		maxResponseTime_ = null;
+		maxDecodingRate_ = null;
+		targetResponseTime_ = null;
+		targetDecodingRate_ = null;
+		noInputTimeout_ = null;
+		recognitionTimeout_ = null;
 		extension_ = null;
 		authorization_ = null;
 		codec_ = null;
 		resultType_ = null;
-		state_ = 0;
+		state_ = -1;
 		lastMessage_ = "";
 		waitingResults_ = 0;
 	}
@@ -108,12 +129,20 @@ public abstract class Wrp {
 		grammarFileNames_ = grammarFileNames;
 	}
 
+	public void setMode(string mode) {
+		mode_ = mode;
+	}
+
 	public void setProfileId(string profileId) {
 		profileId_ = profileId;
 	}
 
 	public void setProfileWords(string profileWords) {
 		profileWords_ = profileWords;
+	}
+
+	public void setSegmenterType(string segmenterType) {
+		segmenterType_ = segmenterType;
 	}
 
 	public void setSegmenterProperties(string segmenterProperties) {
@@ -126,6 +155,34 @@ public abstract class Wrp {
 
 	public void setResultUpdatedInterval(string resultUpdatedInterval) {
 		resultUpdatedInterval_ = resultUpdatedInterval;
+	}
+
+	public void setMaxDecodingTime(string maxDecodingTime) {
+		maxDecodingTime_ = maxDecodingTime;
+	}
+
+	public void setMaxResponseTime(string maxResponseTime) {
+		maxResponseTime_ = maxResponseTime;
+	}
+
+	public void setMaxDecodingRate(string maxDecodingRate) {
+		maxDecodingRate_ = maxDecodingRate;
+	}
+
+	public void setTargetResponseTime(string targetResponseTime) {
+		targetResponseTime_ = targetResponseTime;
+	}
+
+	public void setTargetDecodingRate(string targetDecodingRate) {
+		targetDecodingRate_ = targetDecodingRate;
+	}
+
+	public void setNoInputTimeout(string noInputTimeout) {
+		noInputTimeout_ = noInputTimeout;
+	}
+
+	public void setRecognitionTimeout(string recognitionTimeout) {
+		recognitionTimeout_ = recognitionTimeout;
 	}
 
 	public void setExtension(string extension) {
@@ -147,6 +204,18 @@ public abstract class Wrp {
 	public void setServiceAuthorization(string serviceAuthorization) {
 		if (serviceAuthorization != null) {
 			authorization_ = serviceAuthorization;
+		}
+	}
+
+	public void setVoiceDetection(string voiceDetection) {
+		if (voiceDetection != null) {
+			segmenterType_ = "G4";
+			segmenterProperties_ = voiceDetection;
+			if (voiceDetection.Length > 3 && voiceDetection[0] == 'G'
+										  && voiceDetection[2] == ' ') {
+				segmenterType_ = voiceDetection.Substring(0, 2);
+				segmenterProperties_ = voiceDetection.Substring(3);
+			}
 		}
 	}
 
@@ -174,6 +243,7 @@ public abstract class Wrp {
 			if (listener_ != null) {
 				listener_.TRACE(lastMessage_);
 			}
+			state_ = -1;
 			disconnect_();
 			return false;
 		}
@@ -194,6 +264,7 @@ public abstract class Wrp {
 			}
 			return false;
 		}
+		state_ = -1;
 		disconnect_();
 		lastMessage_ = "INFO: disconnected from WebSocket server";
 		if (listener_ != null) {
@@ -242,6 +313,16 @@ public abstract class Wrp {
 			} else {
 				command.Append(" \x01");
 			}
+			if (mode_ != null) {
+				command.Append(" mode=");
+				if (mode_.IndexOf(' ') != -1) {
+					command.Append('"');
+					command.Append(mode_);
+					command.Append('"');
+				} else {
+					command.Append(mode_);
+				}
+			}
 			if (profileId_ != null) {
 				command.Append(" profileId=");
 				if (profileId_.IndexOf(' ') != -1) {
@@ -260,6 +341,16 @@ public abstract class Wrp {
 					command.Append('"');
 				} else {
 					command.Append(profileWords_);
+				}
+			}
+			if (segmenterType_ != null) {
+				command.Append(" segmenterType=");
+				if (segmenterType_.IndexOf(' ') != -1) {
+					command.Append('"');
+					command.Append(segmenterType_);
+					command.Append('"');
+				} else {
+					command.Append(segmenterType_);
 				}
 			}
 			if (segmenterProperties_ != null) {
@@ -290,6 +381,76 @@ public abstract class Wrp {
 					command.Append('"');
 				} else {
 					command.Append(resultUpdatedInterval_);
+				}
+			}
+			if (maxDecodingTime_ != null) {
+				command.Append(" maxDecodingTime=");
+				if (maxDecodingTime_.IndexOf(' ') != -1) {
+					command.Append('"');
+					command.Append(maxDecodingTime_);
+					command.Append('"');
+				} else {
+					command.Append(maxDecodingTime_);
+				}
+			}
+			if (maxResponseTime_ != null) {
+				command.Append(" maxResponseTime=");
+				if (maxResponseTime_.IndexOf(' ') != -1) {
+					command.Append('"');
+					command.Append(maxResponseTime_);
+					command.Append('"');
+				} else {
+					command.Append(maxResponseTime_);
+				}
+			}
+			if (maxDecodingRate_ != null) {
+				command.Append(" maxDecodingRate=");
+				if (maxDecodingRate_.IndexOf(' ') != -1) {
+					command.Append('"');
+					command.Append(maxDecodingRate_);
+					command.Append('"');
+				} else {
+					command.Append(maxDecodingRate_);
+				}
+			}
+			if (targetResponseTime_ != null) {
+				command.Append(" targetResponseTime=");
+				if (targetResponseTime_.IndexOf(' ') != -1) {
+					command.Append('"');
+					command.Append(targetResponseTime_);
+					command.Append('"');
+				} else {
+					command.Append(targetResponseTime_);
+				}
+			}
+			if (targetDecodingRate_ != null) {
+				command.Append(" targetDecodingRate=");
+				if (targetDecodingRate_.IndexOf(' ') != -1) {
+					command.Append('"');
+					command.Append(targetDecodingRate_);
+					command.Append('"');
+				} else {
+					command.Append(targetDecodingRate_);
+				}
+			}
+			if (noInputTimeout_ != null) {
+				command.Append(" noInputTimeout=");
+				if (noInputTimeout_.IndexOf(' ') != -1) {
+					command.Append('"');
+					command.Append(noInputTimeout_);
+					command.Append('"');
+				} else {
+					command.Append(noInputTimeout_);
+				}
+			}
+			if (recognitionTimeout_ != null) {
+				command.Append(" recognitionTimeout=");
+				if (recognitionTimeout_.IndexOf(' ') != -1) {
+					command.Append('"');
+					command.Append(recognitionTimeout_);
+					command.Append('"');
+				} else {
+					command.Append(recognitionTimeout_);
 				}
 			}
 			if (extension_ != null) {
@@ -329,7 +490,7 @@ public abstract class Wrp {
 				while (state_ == 1) {
 					Monitor.Wait(this);
 				}
-				if (state_ == 5) {
+				if (state_ != 2) {
 					return false;
 				}
 			} catch (ThreadInterruptedException) {
@@ -402,7 +563,7 @@ public abstract class Wrp {
 				while (state_ == 4) {
 					Monitor.Wait(this);
 				}
-				if (state_ == 5) {
+				if (state_ != 0) {
 					return false;
 				}
 			} catch (ThreadInterruptedException) {
@@ -442,11 +603,15 @@ public abstract class Wrp {
 	}
 
 	protected void onClose_() {
+		lock (this) {
+			state_ = 0;
+			Monitor.PulseAll(this);
+		}
 	}
 
 	protected void onError_(Exception cause) {
 		lock (this) {
-			if (state_ == 5) {
+			if (state_ == -1 || state_ == 0 || state_ == 5) {
 				return;
 			}
 			lastMessage_ = "ERROR: caught exception (" + cause.Message + ")";

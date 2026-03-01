@@ -155,6 +155,9 @@ class WrpSimpleTester implements com\amivoice\wrp\WrpListener {
 	}
 
 	private function text_($result) {
+		if (strpos($result, ",\"text\":\"") === false) {
+			return null;
+		}
 		return json_decode($result, true)["text"];
 	}
 }

@@ -1,6 +1,6 @@
 PRJ = HrpTester
 
-CPPC = g++ -std=c++11
+CPPC = g++
 LD = g++
 LDD = ldd -d
 
@@ -8,7 +8,9 @@ SRC = \
 	$(PRJ).cpp
 
 LIB = \
-	-lHrp
+	-lHrp \
+	-ldl \
+	-lpthread
 
 CPPDEFINES = \
 	-DLINUX \
@@ -23,9 +25,9 @@ CPPFLAGS = \
 LDFLAGS = \
 	-L$(OUTDIR)
 
-OUTDIR = bin/linux64$(if $(debug),_debug,_release)
-OBJDIR = obj/linux64$(if $(debug),_debug,_release)/$(PRJ)
-	
+OUTDIR = bin/linux_x86_64$(if $(debug),_debug,_release)
+OBJDIR = obj/linux_x86_64$(if $(debug),_debug,_release)/$(PRJ)
+
 OUT = $(OUTDIR)/$(PRJ)
 OBJ = $(patsubst %.cpp,$(OBJDIR)/%.o,$(notdir $(SRC)))
 DEP = $(patsubst %.cpp,$(OBJDIR)/%.d,$(notdir $(SRC)))

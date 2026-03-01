@@ -1,22 +1,40 @@
-var Wrp = function() {
+var Wrp = function () {
 	// public オブジェクト
 	var wrp_ = {
 		// public プロパティ
-		version: "Wrp/1.0.07",
+		version: "Wrp/1.0.12",
 		serverURL: "",
 		serverURLElement: undefined,
 		grammarFileNames: "",
 		grammarFileNamesElement: undefined,
+		mode: "",
+		modeElement: undefined,
 		profileId: "",
 		profileIdElement: undefined,
 		profileWords: "",
 		profileWordsElement: undefined,
+		segmenterType: "",
+		segmenterTypeElement: undefined,
 		segmenterProperties: "",
 		segmenterPropertiesElement: undefined,
 		keepFillerToken: "",
 		keepFillerTokenElement: undefined,
 		resultUpdatedInterval: "",
 		resultUpdatedIntervalElement: undefined,
+		maxDecodingTime: "",
+		maxDecodingTimeElement: undefined,
+		maxResponseTime: "",
+		maxResponseTimeElement: undefined,
+		maxDecodingRate: "",
+		maxDecodingRateElement: undefined,
+		targetResponseTime: "",
+		targetResponseTimeElement: undefined,
+		targetDecodingRate: "",
+		targetDecodingRateElement: undefined,
+		noInputTimeout: "",
+		noInputTimeoutElement: undefined,
+		recognitionTimeout: "",
+		recognitionTimeoutElement: undefined,
 		extension: "",
 		extensionElement: undefined,
 		authorization: "",
@@ -27,6 +45,12 @@ var Wrp = function() {
 		resultTypeElement: undefined,
 		checkIntervalTime: 0,
 		checkIntervalTimeElement: undefined,
+		dataDuration: 200,
+		dataDurationElement: undefined,
+		dataBytes: 0,
+		dataBytesElement: undefined,
+		dataCount: 0,
+		dataCountElement: undefined,
 		issuerURL: "",
 		issuerURLElement: undefined,
 		sid: null,
@@ -69,44 +93,44 @@ var Wrp = function() {
 	//  ┌───────────────────────────────┐
 	//  │0(disconnected)                                               │
 	//  └────────┬──────────────────────┘
-	//           connect()↓↑onclose   ↑onclose     ↑onclose           
+	//           connect()↓↑onclose   ↑onclose     ↑onclose
 	//  ┌─────────┴──┐    │    ┌───┴────────┐
 	//  │1(connecting)           │    │    │8(disconnecting)        │
 	//  └────────┬───┘    │    └────────────┘
-	//              onopen│            │          ↑↑                  
-	//                    ↓            │       ※1││disconnect()      
+	//              onopen│            │          ↑↑
+	//                    ↓            │       ※1││disconnect()
 	//  ┌───────────────┴─────┴┴────────┐
 	//  │2(connected)                                                  │
 	//  └────────┬──────────────────────┘
-	//    feedDataResume()│↑                        ↑                  
-	//            resume()↓│pauseEnded              │pauseEnded        
+	//    feedDataResume()│↑                        ↑
+	//            resume()↓│pauseEnded              │pauseEnded
 	//  ┌─────────┴──┐          ┌───┴────────┐
 	//  │3(waiting resumeEnded)  │    ┌─→│7(waiting pauseEnded)   │
 	//  └────────┬───┘    │    └────────────┘
-	//         resumeEnded│┌─────┘            ↑                  
-	//                 's'││pause()                 │pause()           
-	//                    ↓│'s' error response      │'e' response      
+	//         resumeEnded│┌─────┘            ↑
+	//                 's'││pause()                 │pause()
+	//                    ↓│'s' error response      │'e' response
 	//  ┌─────────┴──┐          ┌───┴────────┐
 	//  │4(waiting 's' response) │          │6(waiting 'e' response) │
 	//  └────────┬───┘          └────────────┘
-	//        's' response│                          ↑'e'               
-	//                    ↓                          │feedDataPause()   
+	//        's' response│                          ↑'e'
+	//                    ↓                          │feedDataPause()
 	//  ┌──────────────────────┴────────┐
 	//  │5(resumed)                                                    │
 	//  └────────┬──────────────────────┘
-	//          feedData()│                          ↑                  
-	//                 'p'└─────────────┘                  
+	//          feedData()│                          ↑
+	//                 'p'└─────────────┘
 	//                                    ※1 error response・disconnect()
 	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 	//  ┌───────────────────────────────┐
 	//  │0(disconnected)                                               │
 	//  └───────────────────────────────┘
-	//    ↑pauseEnded                          ↑pauseEnded              
+	//    ↑pauseEnded                          ↑pauseEnded
 	//  ┌┴─────────┐              ┌┴───────────┐
 	//  │13                  ├──────→│17                      │
 	//  └──────────┘resumeEnded   └────────────┘
-	//    ↑                    pause()      pause()↑         onclose↑  
-	//    │onclose                          onclose├──┬──┐    │  
+	//    ↑                    pause()      pause()↑         onclose↑
+	//    │onclose                          onclose├──┬──┐    │
 	//  ┌┴┐                                    ┌┴┐┌┴┐┌┴┐┌┴┐
 	//  │3 │                                    │4 ││5 ││6 ││7 │
 	//  └─┘                                    └─┘└─┘└─┘└─┘
@@ -117,12 +141,12 @@ var Wrp = function() {
 	//    ↑                    ┌─┐          ↑                  ┌─┐
 	//    │                ┌→│13│          │              ┌→│17│
 	//    │disconnect()    │  └─┘          │disconnect()  │  └─┘
-	//    │pauseEnded      │onclose           │pauseEnded    │onclose 
+	//    │pauseEnded      │onclose           │pauseEnded    │onclose
 	//  ┌┴────────┴┐              ┌┴───────┴───┐
 	//  │23                  ├──────→│27                      │
 	//  └──────────┘resumeEnded   └────────────┘
-	//    ↑                    pause()      pause()↑  error response↑  
-	//    │error resopnse            error response├──┬──┐    │  
+	//    ↑                    pause()      pause()↑  error response↑
+	//    │error resopnse            error response├──┬──┐    │
 	//  ┌┴┐                                    ┌┴┐┌┴┐┌┴┐┌┴┐
 	//  │3 │                                    │4 ││5 ││6 ││7 │
 	//  └─┘                                    └─┘└─┘└─┘└─┘
@@ -136,12 +160,12 @@ var Wrp = function() {
 	//    │                    ┌─┐          ││'e' response    ┌─┐
 	//    │                ┌→│ 8│          ││            ┌→│ 8│
 	//    │                │  └─┘          ││            │  └─┘
-	//    │onclose         │※1        onclose││            │※1     
+	//    │onclose         │※1        onclose││            │※1
 	//  ┌┴────────┴┐              ┌┴┴──────┴───┐
 	//  │34                  ├──────→│36                      │
 	//  └──────────┘'s' response  └────────────┘
-	//    ↑                    'e'              'e'↑                ↑  
-	//    │pauseEnded                    pauseEnded│      pauseEnded│  
+	//    ↑                    'e'              'e'↑                ↑
+	//    │pauseEnded                    pauseEnded│      pauseEnded│
 	//  ┌┴┐                                    ┌┴┐            ┌┴┐
 	//  │4 │                                    │5 │            │6 │
 	//  └─┘                                    └─┘            └─┘
@@ -153,16 +177,33 @@ var Wrp = function() {
 	var checkIntervalTimeoutTimerId_ = null;
 	var interlock_ = false;
 	var recorder_ = window.Recorder || null;
+	var converter_ = null;
+	var data__ = null;
+	var data_ = null;
+	var dataBytes_ = 0;
+	var maxDataBytes_ = 0;
+	var dataCount_ = 0;
+	var maxDataCount_ = 0;
 
 	if (recorder_) {
-		// 録音ライブラリのプロパティの設定
-		recorder_.downSampling = true;
-		recorder_.adpcmPacking = false;
-
 		// 録音の開始処理が完了した時に呼び出されます。
-		recorder_.resumeEnded = function(codec) {
-			wrp_.codec = codec;
-			if (wrp_.codecElement) wrp_.codecElement.value = wrp_.codec;
+		recorder_.resumeEnded = function (codec, bytesPerSec, framesPerSec) {
+			if (wrp_.codecElement) {
+				wrp_.codecElement.value = codec;
+			} else {
+				wrp_.codec = codec;
+			}
+			if (wrp_.dataDurationElement) wrp_.dataDuration = wrp_.dataDurationElement.value - 0;
+			if (wrp_.dataBytesElement) {
+				wrp_.dataBytesElement.value = bytesPerSec * wrp_.dataDuration / 1000 | 0;
+			} else {
+				wrp_.dataBytes = bytesPerSec * wrp_.dataDuration / 1000 | 0;
+			}
+			if (wrp_.dataCountElement) {
+				wrp_.dataCountElement.value = framesPerSec * wrp_.dataDuration / 1000 | 0;
+			} else {
+				wrp_.dataCount = framesPerSec * wrp_.dataDuration / 1000 | 0;
+			}
 			if (state_ == 0) {
 				connect_();
 			} else
@@ -181,7 +222,7 @@ var Wrp = function() {
 		};
 
 		// 録音の開始処理が失敗した時または録音の停止処理が完了した時に呼び出されます。
-		recorder_.pauseEnded = function(reason) {
+		recorder_.pauseEnded = function (reason) {
 			if (state_ == 0) {
 				if (wrp_.feedDataResumeStarted) wrp_.feedDataResumeStarted();
 				if (wrp_.feedDataPauseEnded) wrp_.feedDataPauseEnded(reason);
@@ -228,11 +269,25 @@ var Wrp = function() {
 		};
 
 		// 音声データが録音された時に呼び出されます。
-		recorder_.recorded = function(data) {
-			if (state_ === 5) {
-				data = recorder_.pack(data);
-				feedData__(data);
+		recorder_.recorded = function (data) {
+			if (state_ !== 5) {
+				if (state_ > 0 && state_ < 5) {
+					if (data__ === null) {
+						data__ = [];
+					}
+					data = new Uint8Array(new Uint8Array(new Uint8Array(data.buffer)).buffer, data.byteOffset, data.byteLength); // deep copy
+					data__.push(data);
+					return;
+				}
+				return;
 			}
+			if (data__) {
+				for (var i = 0; i < data__.length; i++) {
+					feedData__(data__[i]);
+				}
+				data__ = null;
+			}
+			feedData__(data);
 		};
 	}
 
@@ -268,7 +323,7 @@ var Wrp = function() {
 			return true;
 		}
 		state_ = 1;
-		socket_.onopen = function(event) {
+		socket_.onopen = function (event) {
 			state_ = 2;
 			if (wrp_.TRACE) wrp_.TRACE("INFO: connected to WebSocket server: " + wrp_.serverURL);
 			if (wrp_.connectEnded) wrp_.connectEnded();
@@ -276,11 +331,14 @@ var Wrp = function() {
 				feedDataResume_();
 			}
 		};
-		socket_.onclose = function(event) {
+		socket_.onclose = function (event) {
 			if (state_ === 1) {
 				state_ = 0;
 				if (wrp_.TRACE) wrp_.TRACE("ERROR: can't connect to WebSocket server: " + wrp_.serverURL);
 				if (wrp_.disconnectEnded) wrp_.disconnectEnded();
+				if (recorder_) {
+					recorder_.pause();
+				}
 				interlock_ = false;
 			} else
 			if (state_ === 2) {
@@ -349,7 +407,7 @@ var Wrp = function() {
 				interlock_ = false;
 			}
 		};
-		socket_.onmessage = function(event) {
+		socket_.onmessage = function (event) {
 			if (wrp_.TRACE) wrp_.TRACE("-> " + event.data);
 			var tag = event.data[0];
 			var body = event.data.substring(2);
@@ -624,16 +682,28 @@ var Wrp = function() {
 	}
 	function feedDataResume__() {
 		if (wrp_.grammarFileNamesElement) wrp_.grammarFileNames = wrp_.grammarFileNamesElement.value;
+		if (wrp_.modeElement) wrp_.mode = wrp_.modeElement.value;
 		if (wrp_.profileIdElement) wrp_.profileId = wrp_.profileIdElement.value;
 		if (wrp_.profileWordsElement) wrp_.profileWords = wrp_.profileWordsElement.value;
+		if (wrp_.segmenterTypeElement) wrp_.segmenterType = wrp_.segmenterTypeElement.value;
 		if (wrp_.segmenterPropertiesElement) wrp_.segmenterProperties = wrp_.segmenterPropertiesElement.value;
 		if (wrp_.keepFillerTokenElement) wrp_.keepFillerToken = wrp_.keepFillerTokenElement.value;
 		if (wrp_.resultUpdatedIntervalElement) wrp_.resultUpdatedInterval = wrp_.resultUpdatedIntervalElement.value;
+		if (wrp_.maxDecodingTimeElement) wrp_.maxDecodingTime = wrp_.maxDecodingTimeElement.value;
+		if (wrp_.maxResponseTimeElement) wrp_.maxResponseTime = wrp_.maxResponseTimeElement.value;
+		if (wrp_.maxDecodingRateElement) wrp_.maxDecodingRate = wrp_.maxDecodingRateElement.value;
+		if (wrp_.targetResponseTimeElement) wrp_.targetResponseTime = wrp_.targetResponseTimeElement.value;
+		if (wrp_.targetDecodingRateElement) wrp_.targetDecodingRate = wrp_.targetDecodingRateElement.value;
+		if (wrp_.noInputTimeoutElement) wrp_.noInputTimeout = wrp_.noInputTimeoutElement.value;
+		if (wrp_.recognitionTimeoutElement) wrp_.recognitionTimeout = wrp_.recognitionTimeoutElement.value;
 		if (wrp_.extensionElement) wrp_.extension = wrp_.extensionElement.value;
 		if (wrp_.authorizationElement) wrp_.authorization = wrp_.authorizationElement.value;
 		if (wrp_.codecElement) wrp_.codec = wrp_.codecElement.value;
 		if (wrp_.resultTypeElement) wrp_.resultType = wrp_.resultTypeElement.value;
 		if (wrp_.checkIntervalTimeElement) wrp_.checkIntervalTime = wrp_.checkIntervalTimeElement.value - 0;
+		if (wrp_.dataDurationElement) wrp_.dataDuration = wrp_.dataDurationElement.value - 0;
+		if (wrp_.dataBytesElement) wrp_.dataBytes = wrp_.dataBytesElement.value - 0;
+		if (wrp_.dataCountElement) wrp_.dataCount = wrp_.dataCountElement.value - 0;
 		var command = "s ";
 		if (wrp_.codec) {
 			command += wrp_.codec;
@@ -648,11 +718,17 @@ var Wrp = function() {
 		} else {
 			command += " \x01";
 		}
+		if (wrp_.mode) {
+			command += " mode=" + wrp_.mode;
+		}
 		if (wrp_.profileId) {
 			command += " profileId=" + wrp_.profileId;
 		}
 		if (wrp_.profileWords) {
 			command += " profileWords=\"" + wrp_.profileWords.replace(/"/g, "\"\"") + "\"";
+		}
+		if (wrp_.segmenterType) {
+			command += " segmenterType=" + wrp_.segmenterType;
 		}
 		if (wrp_.segmenterProperties) {
 			command += " segmenterProperties=\"" + wrp_.segmenterProperties.replace(/"/g, "\"\"") + "\"";
@@ -662,6 +738,27 @@ var Wrp = function() {
 		}
 		if (wrp_.resultUpdatedInterval) {
 			command += " resultUpdatedInterval=" + wrp_.resultUpdatedInterval;
+		}
+		if (wrp_.maxDecodingTime) {
+			command += " maxDecodingTime=" + wrp_.maxDecodingTime;
+		}
+		if (wrp_.maxResponseTime) {
+			command += " maxResponseTime=" + wrp_.maxResponseTime;
+		}
+		if (wrp_.maxDecodingRate) {
+			command += " maxDecodingRate=" + wrp_.maxDecodingRate;
+		}
+		if (wrp_.targetResponseTime) {
+			command += " targetResponseTime=" + wrp_.targetResponseTime;
+		}
+		if (wrp_.targetDecodingRate) {
+			command += " targetDecodingRate=" + wrp_.targetDecodingRate;
+		}
+		if (wrp_.noInputTimeout) {
+			command += " noInputTimeout=" + wrp_.noInputTimeout;
+		}
+		if (wrp_.recognitionTimeout) {
+			command += " recognitionTimeout=" + wrp_.recognitionTimeout;
 		}
 		if (wrp_.extension) {
 			command += " extension=\"" + wrp_.extension.replace(/"/g, "\"\"") + "\"";
@@ -674,29 +771,106 @@ var Wrp = function() {
 		}
 		socket_.send(command);
 		if (wrp_.TRACE) wrp_.TRACE("<- " + command);
+		// <!-- for buffering
+		if (wrp_.dataBytes > 0) {
+			if (!data_ || data_.length < 1 + wrp_.dataBytes) {
+				data_ = new Uint8Array(1 + wrp_.dataBytes);
+				data_[0] = 0x70; // 'p'
+			}
+			dataBytes_ = 1;
+			maxDataBytes_ = 1 + wrp_.dataBytes;
+			// <!-- for converting
+			converter_ = recorder_.getConverter();
+			if (converter_) {
+				converter_.convert();
+			}
+			// -->
+		} else {
+			dataBytes_ = 0;
+			maxDataBytes_ = 0;
+			// <!-- for converting
+			converter_ = null;
+			// -->
+		}
+		if (wrp_.dataCount > 0) {
+			dataCount_ = maxDataCount_ = wrp_.dataCount;
+		} else {
+			dataCount_ = maxDataCount_ = -1;
+		}
+		// -->
 		return true;
 	}
 
 	// 音声データの供給
 	function feedData_(data) {
 		if (state_ !== 5) {
-			if (wrp_.TRACE) wrp_.TRACE("ERROR: can't feed data to WebSocket server (Invalid state: " + state_ + ")");
+			if (state_ > 0 && state_ < 5) {
+				if (data__ === null) {
+					data__ = [];
+				}
+				data = new Uint8Array(new Uint8Array(new Uint8Array(data.buffer)).buffer, data.byteOffset, data.byteLength); // deep copy
+				data__.push(data);
+				return true;
+			}
 			return false;
+		}
+		if (data__) {
+			for (var i = 0; i < data__.length; i++) {
+				feedData__(data__[i]);
+			}
+			data__ = null;
 		}
 		feedData__(data);
 		return true;
 	}
 	function feedData__(data) {
+		// <!-- for buffering
+		if (dataBytes_ > 0) {
+			if (dataCount_ > 0) {
+				dataCount_--;
+			}
+			if (dataBytes_ + data.length <= maxDataBytes_) {
+				data_.set(data, dataBytes_);
+				dataBytes_ += data.length;
+				if (dataBytes_ >= maxDataBytes_ || dataCount_ === 0) {
+					feedData___(new Uint8Array(data_.buffer, data_.byteOffset, dataBytes_));
+					dataBytes_ = 1;
+					dataCount_ = maxDataCount_;
+				}
+				return;
+			}
+			dataCount_ = maxDataCount_;
+			if (dataBytes_ > 1) {
+				feedData___(new Uint8Array(data_.buffer, data_.byteOffset, dataBytes_));
+				dataBytes_ = 1;
+				if (dataBytes_ + data.length <= maxDataBytes_) {
+					data_.set(data, dataBytes_);
+					dataBytes_ += data.length;
+					if (dataBytes_ >= maxDataBytes_) {
+						feedData___(new Uint8Array(data_.buffer, data_.byteOffset, dataBytes_));
+						dataBytes_ = 1;
+					}
+					return;
+				}
+			}
+		}
+		// -->
 		if (data.byteOffset >= 1) {
 			data = new Uint8Array(data.buffer, data.byteOffset - 1, 1 + data.length);
 			data[0] = 0x70; // 'p'
-			socket_.send(data);
+			feedData___(data);
 		} else {
 			var newData = new Uint8Array(1 + data.length);
 			newData[0] = 0x70; // 'p'
 			newData.set(data, 1);
-			socket_.send(newData);
+			feedData___(newData);
 		}
+	}
+	function feedData___(data) {
+		if (converter_) {
+			data = converter_.convert(data);
+		}
+		socket_.send(data);
 	}
 
 	// 音声データの供給の停止
@@ -705,6 +879,12 @@ var Wrp = function() {
 			if (wrp_.TRACE) wrp_.TRACE("ERROR: can't stop feeding data to WebSocket server (Invalid state: " + state_ + ")");
 			return false;
 		}
+		// <!-- for buffering
+		if (dataBytes_ > 1) {
+			feedData___(new Uint8Array(data_.buffer, data_.byteOffset, dataBytes_));
+			dataBytes_ = 1;
+		}
+		// -->
 		if (wrp_.feedDataPauseStarted) wrp_.feedDataPauseStarted();
 		state_ = 6;
 		stopCheckIntervalTimeoutTimer_();
@@ -808,7 +988,7 @@ var Wrp = function() {
 			searchParams += "&epi=" + encodeURIComponent(wrp_.epi);
 		}
 		var httpRequest = new XMLHttpRequest();
-		httpRequest.addEventListener("load", function(e) {
+		httpRequest.addEventListener("load", function (e) {
 			if (e.target.status === 200) {
 				if (wrp_.serviceAuthorizationElement) {
 					wrp_.serviceAuthorizationElement.value = e.target.response;
@@ -823,13 +1003,13 @@ var Wrp = function() {
 				if (wrp_.issueEnded) wrp_.issueEnded("");
 			}
 		});
-		httpRequest.addEventListener("error", function(e) {
+		httpRequest.addEventListener("error", function (e) {
 			if (wrp_.issueEnded) wrp_.issueEnded("");
 		});
-		httpRequest.addEventListener("abort", function(e) {
+		httpRequest.addEventListener("abort", function (e) {
 			if (wrp_.issueEnded) wrp_.issueEnded("");
 		});
-		httpRequest.addEventListener("timeout", function(e) {
+		httpRequest.addEventListener("timeout", function (e) {
 			if (wrp_.issueEnded) wrp_.issueEnded("");
 		});
 		httpRequest.open("POST", wrp_.issuerURL, true);

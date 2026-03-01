@@ -1,13 +1,13 @@
-var Recorder = function() {
+var Recorder = function () {
 	// window.AudioContext()
 	window.AudioContext = window.AudioContext || window.webkitAudioContext || window.mozAudioContext || window.msAudioContext;
 	// navigator.getUserMedia()
 	navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia;
 	// navigator.mediaDevices.getUserMedia()
 	navigator.mediaDevices = navigator.mediaDevices || ((navigator.getUserMedia) ? {
-		getUserMedia: function(c) {
+		getUserMedia: function (c) {
 			return new Promise(
-				function(y, n) {
+				function (y, n) {
 					navigator.getUserMedia(c, y, n);
 				}
 			);
@@ -17,7 +17,9 @@ var Recorder = function() {
 	// public オブジェクト
 	var recorder_ = {
 		// public プロパティ
-		version: "Recorder/1.0.08",
+		version: "Recorder/1.0.12",
+		recordingSource: 1,
+		recordingSourceElement: undefined,
 		sampleRate: 16000,
 		sampleRateElement: undefined,
 		maxRecordingTime: 60000,
@@ -25,12 +27,14 @@ var Recorder = function() {
 		downSampling: false,
 		downSamplingElement: undefined,
 		adpcmPacking: false,
-		adpcmPackinglement: undefined,
+		adpcmPackingElement: undefined,
+		opusPacking: false,
+		opusPackingElement: undefined,
 		// public メソッド
 		resume: resume_,
 		pause: pause_,
 		isActive: isActive_,
-		pack: pack_,
+		getConverter: getConverter_,
 		// イベントハンドラ
 		resumeStarted: undefined,
 		resumeEnded: undefined,
@@ -42,7 +46,7 @@ var Recorder = function() {
 
 	// 録音関連
 	// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-	//  ┌────┐                                                      
+	//  ┌────┐
 	//  │0       │←───────────────────────┐┐┐
 	//  └┬───┘                                                │││
 	//    │resume()                                                │││
@@ -103,14 +107,15 @@ var Recorder = function() {
 	var audioStream_;
 	var audioProvider_;
 	var audioSamplesPerSec_;
-	var audioDecimatationFactor_;
+	var audioDecimationFactor_;
 	var temporaryAudioData_;
 	var temporaryAudioDataSamples_;
 	var coefData_;
 	var pcmData_;
 	var waveData_;
-	var waveDataBytes_;
 	var waveFile_;
+	var encoder_;
+	var converter_;
 	var reason_;
 	var maxRecordingTimeTimerId_;
 
@@ -118,6 +123,7 @@ var Recorder = function() {
 	async function initialize_() {
 		// 録音関係の各種変数の初期化
 		audioContext_ = new AudioContext({sampleRate: recorder_.sampleRate});
+		recorder_.sampleRate = audioContext_.sampleRate; // public プロパティを通して外部から参照可能にしておく...
 		await audioContext_.audioWorklet.addModule(URL.createObjectURL(new Blob([
 			"registerProcessor('audioWorkletProcessor', class extends AudioWorkletProcessor {",
 			"  constructor() {",
@@ -138,14 +144,15 @@ var Recorder = function() {
 		], {type: 'application/javascript'})));
 		audioProcessor_ = new AudioWorkletNode(audioContext_, 'audioWorkletProcessor');
 		audioProcessor_.bufferSize = 128;
-		audioProcessor_onaudioprocess_ = function(event) {
+		audioProcessor_onaudioprocess_ = function (event) {
 			// <!-- for AudioWorklet
 			if (state_ === 0) {
 				return;
 			}
 			// -->
 			var audioData = event.data;
-			var pcmData = new Uint8Array(audioData.length * 2);
+			var pcmDataBytes = audioData.length * 2;
+			var pcmData = new Uint8Array(new ArrayBuffer(16 + pcmDataBytes), 16, pcmDataBytes);
 			var pcmDataIndex = 0;
 			for (var audioDataIndex = 0; audioDataIndex < audioData.length; audioDataIndex++) {
 				var pcm = audioData[audioDataIndex] * 32768 | 0; // 小数 (0.0～1.0) を 整数 (-32768～32767) に変換...
@@ -158,8 +165,14 @@ var Recorder = function() {
 				pcmData[pcmDataIndex++] = (pcm     ) & 0xFF;
 				pcmData[pcmDataIndex++] = (pcm >> 8) & 0xFF;
 			}
-			waveData_.push(pcmData.buffer);
-			waveDataBytes_ += pcmData.buffer.byteLength;
+			if (!encoder_) {
+				waveData_.push(pcmData);
+			} else {
+				pcmData = encoder_.encode(pcmData);
+				if (pcmData) {
+					waveData_.push(pcmData);
+				}
+			}
 			if (state_ === 3) {
 				state_ = 4;
 				audioStream_.stopTracks();
@@ -170,14 +183,14 @@ var Recorder = function() {
 				if (recorder_.TRACE) recorder_.TRACE("INFO: stopped recording");
 			}
 		};
-		audioProcessor_onaudioprocess_recorded_ = function(event) {
+		audioProcessor_onaudioprocess_recorded_ = function (event) {
 			// <!-- for AudioWorklet
 			if (state_ === 0) {
 				return;
 			}
 			// -->
 			var audioData = event.data;
-			var pcmDataOffset = (ima_state_ > 0) ? 1 + 16 : 1;
+			var pcmDataOffset = (encoder_) ? 1 + 16 : 1;
 			var pcmDataIndex = pcmDataOffset;
 			for (var audioDataIndex = 0; audioDataIndex < audioData.length; audioDataIndex++) {
 				var pcm = audioData[audioDataIndex] * 32768 | 0; // 小数 (0.0～1.0) を 整数 (-32768～32767) に変換...
@@ -187,10 +200,18 @@ var Recorder = function() {
 				if (pcm < -32768) {
 					pcm = -32768;
 				}
-				pcmData_[pcmDataIndex++] = (pcm >> 8) & 0xFF;
 				pcmData_[pcmDataIndex++] = (pcm     ) & 0xFF;
+				pcmData_[pcmDataIndex++] = (pcm >> 8) & 0xFF;
 			}
-			if (recorder_.recorded) recorder_.recorded(pcmData_.subarray(pcmDataOffset, pcmDataIndex));
+			var pcmData = pcmData_.subarray(pcmDataOffset, pcmDataIndex);
+			if (!encoder_) {
+				recorder_.recorded(pcmData);
+			} else {
+				pcmData = encoder_.encode(pcmData);
+				if (pcmData) {
+					recorder_.recorded(pcmData);
+				}
+			}
 			if (state_ === 3) {
 				state_ = 4;
 				audioStream_.stopTracks();
@@ -201,7 +222,7 @@ var Recorder = function() {
 				if (recorder_.TRACE) recorder_.TRACE("INFO: stopped recording");
 			}
 		};
-		audioProcessor_onaudioprocess_downSampling_ = function(event) {
+		audioProcessor_onaudioprocess_downSampling_ = function (event) {
 			// <!-- for Safari and AudioWorklet
 			if (state_ === 0) {
 				return;
@@ -213,9 +234,10 @@ var Recorder = function() {
 				temporaryAudioData_[temporaryAudioDataSamples_++] = audioData[audioDataIndex++];
 			}
 			while (temporaryAudioDataSamples_ == temporaryAudioData_.length) {
-				var pcmData = new Uint8Array((audioData.length / audioDecimatationFactor_ | 0) * 2);
+				var pcmDataBytes = (audioData.length / audioDecimationFactor_ | 0) * 2;
+				var pcmData = new Uint8Array(new ArrayBuffer(16 + pcmDataBytes), 16, pcmDataBytes);
 				var pcmDataIndex = 0;
-				for (var temporaryAudioDataIndex = audioDecimatationFactor_ - 1; temporaryAudioDataIndex + 20 < temporaryAudioData_.length; temporaryAudioDataIndex += audioDecimatationFactor_) {
+				for (var temporaryAudioDataIndex = audioDecimationFactor_ - 1; temporaryAudioDataIndex + 20 < temporaryAudioData_.length; temporaryAudioDataIndex += audioDecimationFactor_) {
 					var pcm_float = 0.0;
 					for (var i = 0; i <= 20; i++) {
 						pcm_float += temporaryAudioData_[temporaryAudioDataIndex + i] * coefData_[i];
@@ -230,8 +252,14 @@ var Recorder = function() {
 					pcmData[pcmDataIndex++] = (pcm     ) & 0xFF;
 					pcmData[pcmDataIndex++] = (pcm >> 8) & 0xFF;
 				}
-				waveData_.push(pcmData.buffer);
-				waveDataBytes_ += pcmData.buffer.byteLength;
+				if (!encoder_) {
+					waveData_.push(pcmData);
+				} else {
+					pcmData = encoder_.encode(pcmData);
+					if (pcmData) {
+						waveData_.push(pcmData);
+					}
+				}
 				temporaryAudioDataSamples_ = 0;
 				var temporaryAudioDataIndex = temporaryAudioData_.length - 20;
 				while (temporaryAudioDataIndex < temporaryAudioData_.length) {
@@ -251,7 +279,7 @@ var Recorder = function() {
 				if (recorder_.TRACE) recorder_.TRACE("INFO: stopped recording");
 			}
 		};
-		audioProcessor_onaudioprocess_downSampling_recorded_ = function(event) {
+		audioProcessor_onaudioprocess_downSampling_recorded_ = function (event) {
 			// <!-- for Safari and AudioWorklet
 			if (state_ === 0) {
 				return;
@@ -263,9 +291,9 @@ var Recorder = function() {
 				temporaryAudioData_[temporaryAudioDataSamples_++] = audioData[audioDataIndex++];
 			}
 			while (temporaryAudioDataSamples_ == temporaryAudioData_.length) {
-				var pcmDataOffset = (ima_state_ > 0) ? 1 + 16 : 1;
+				var pcmDataOffset = (encoder_) ? 1 + 16 : 1;
 				var pcmDataIndex = pcmDataOffset;
-				for (var temporaryAudioDataIndex = audioDecimatationFactor_ - 1; temporaryAudioDataIndex + 20 < temporaryAudioData_.length; temporaryAudioDataIndex += audioDecimatationFactor_) {
+				for (var temporaryAudioDataIndex = audioDecimationFactor_ - 1; temporaryAudioDataIndex + 20 < temporaryAudioData_.length; temporaryAudioDataIndex += audioDecimationFactor_) {
 					var pcm_float = 0.0;
 					for (var i = 0; i <= 20; i++) {
 						pcm_float += temporaryAudioData_[temporaryAudioDataIndex + i] * coefData_[i];
@@ -277,10 +305,18 @@ var Recorder = function() {
 					if (pcm < -32768) {
 						pcm = -32768;
 					}
-					pcmData_[pcmDataIndex++] = (pcm >> 8) & 0xFF;
 					pcmData_[pcmDataIndex++] = (pcm     ) & 0xFF;
+					pcmData_[pcmDataIndex++] = (pcm >> 8) & 0xFF;
 				}
-				if (recorder_.recorded) recorder_.recorded(pcmData_.subarray(pcmDataOffset, pcmDataIndex));
+				var pcmData = pcmData_.subarray(pcmDataOffset, pcmDataIndex);
+				if (!encoder_) {
+					recorder_.recorded(pcmData);
+				} else {
+					pcmData = encoder_.encode(pcmData);
+					if (pcmData) {
+						recorder_.recorded(pcmData);
+					}
+				}
 				temporaryAudioDataSamples_ = 0;
 				var temporaryAudioDataIndex = temporaryAudioData_.length - 20;
 				while (temporaryAudioDataIndex < temporaryAudioData_.length) {
@@ -302,32 +338,32 @@ var Recorder = function() {
 		};
 		if (audioContext_.sampleRate === 48000) {
 			audioSamplesPerSec_ = 16000;
-			audioDecimatationFactor_ = 3;
+			audioDecimationFactor_ = 3;
 		} else
 		if (audioContext_.sampleRate === 44100) {
 			audioSamplesPerSec_ = 22050;
-			audioDecimatationFactor_ = 2;
+			audioDecimationFactor_ = 2;
 		} else
 		if (audioContext_.sampleRate === 22050) {
 			audioSamplesPerSec_ = 22050;
-			audioDecimatationFactor_ = 1;
+			audioDecimationFactor_ = 1;
 		} else
 		if (audioContext_.sampleRate === 16000) {
 			audioSamplesPerSec_ = 16000;
-			audioDecimatationFactor_ = 1;
+			audioDecimationFactor_ = 1;
 		} else
 		if (audioContext_.sampleRate === 8000) {
 			audioSamplesPerSec_ = 8000;
-			audioDecimatationFactor_ = 1;
+			audioDecimationFactor_ = 1;
 		} else {
 			audioSamplesPerSec_ = 0;
-			audioDecimatationFactor_ = 0;
+			audioDecimationFactor_ = 0;
 		}
-		if (audioDecimatationFactor_ > 1) {
-			temporaryAudioData_ = new Float32Array(20 + ((audioProcessor_.bufferSize / audioDecimatationFactor_ >> 1) << 1) * audioDecimatationFactor_);
+		if (audioDecimationFactor_ > 1) {
+			temporaryAudioData_ = new Float32Array(20 + ((audioProcessor_.bufferSize / audioDecimationFactor_ >> 1) << 1) * audioDecimationFactor_);
 			temporaryAudioDataSamples_ = 0;
 			coefData_ = new Float32Array(10 + 1 + 10);
-			if (audioDecimatationFactor_ == 3) {
+			if (audioDecimationFactor_ == 3) {
 				coefData_[ 0] = -1.9186907e-2;
 				coefData_[ 1] =  1.2144312e-2;
 				coefData_[ 2] =  3.8677038e-2;
@@ -395,10 +431,12 @@ var Recorder = function() {
 			if (recorder_.pauseEnded) recorder_.pauseEnded({code: 2, message: "Unsupported MediaDevices class"}, waveFile_);
 			return true;
 		}
+		if (recorder_.recordingSourceElement) recorder_.recordingSource = recorder_.recordingSourceElement.value - 0;
 		if (recorder_.sampleRateElement) recorder_.sampleRate = recorder_.sampleRateElement.value - 0;
 		if (recorder_.maxRecordingTimeElement) recorder_.maxRecordingTime = recorder_.maxRecordingTimeElement.value - 0;
 		if (recorder_.downSamplingElement) recorder_.downSampling = recorder_.downSamplingElement.checked;
 		if (recorder_.adpcmPackingElement) recorder_.adpcmPacking = recorder_.adpcmPackingElement.checked;
+		if (recorder_.opusPackingElement) recorder_.opusPacking = recorder_.opusPackingElement.checked;
 		if (state_ === 0) {
 			audioStream_ = null;
 			audioProvider_ = null;
@@ -415,30 +453,30 @@ var Recorder = function() {
 		if (recorder_.downSampling) {
 			if (audioContext_.sampleRate === 48000) {
 				audioSamplesPerSec_ = 16000;
-				audioDecimatationFactor_ = 3;
+				audioDecimationFactor_ = 3;
 			} else
 			if (audioContext_.sampleRate === 44100) {
 				audioSamplesPerSec_ = 22050;
-				audioDecimatationFactor_ = 2;
+				audioDecimationFactor_ = 2;
 			} else
 			if (audioContext_.sampleRate === 22050) {
 				audioSamplesPerSec_ = 22050;
-				audioDecimatationFactor_ = 1;
+				audioDecimationFactor_ = 1;
 			} else
 			if (audioContext_.sampleRate === 16000) {
 				audioSamplesPerSec_ = 16000;
-				audioDecimatationFactor_ = 1;
+				audioDecimationFactor_ = 1;
 			} else
 			if (audioContext_.sampleRate === 8000) {
 				audioSamplesPerSec_ = 8000;
-				audioDecimatationFactor_ = 1;
+				audioDecimationFactor_ = 1;
 			} else {
 				audioSamplesPerSec_ = 0;
-				audioDecimatationFactor_ = 0;
+				audioDecimationFactor_ = 0;
 			}
 		} else {
 			audioSamplesPerSec_ = audioContext_.sampleRate;
-			audioDecimatationFactor_ = 1;
+			audioDecimationFactor_ = 1;
 		}
 		if (audioSamplesPerSec_ === 0) {
 			if (recorder_.TRACE) recorder_.TRACE("ERROR: can't start recording (Unsupported sample rate: " + audioContext_.sampleRate + "Hz)");
@@ -448,22 +486,31 @@ var Recorder = function() {
 			return true;
 		}
 		state_ = 1;
-		if (audioDecimatationFactor_ > 1) {
+		if (audioDecimationFactor_ > 1) {
 			for (var i = 0; i <= 20; i++) {
 				temporaryAudioData_[i] = 0.0;
 			}
 			temporaryAudioDataSamples_ = 20;
 		}
-		if (!recorder_.recorded) {
-			waveData_ = [];
-			waveDataBytes_ = 0;
-			waveData_.push(new ArrayBuffer(44));
-			waveDataBytes_ += 44;
+		// <!-- for ADPCM/Opus packing
+		encoder_ = null;
+		if (!encoder_ && recorder_.opusPacking && window.Encoder && window.Encoder.createOpusEncoder) {
+			encoder_ = window.Encoder.createOpusEncoder(audioSamplesPerSec_, /* bitsPerSec */ 24000, /* vbr: VBR */ 1, /* application: AUDIO */ 1, /* complexity */ 10);
 		}
+		if (!encoder_ && recorder_.adpcmPacking && window.Encoder && window.Encoder.createADPCMEncoder) {
+			encoder_ = window.Encoder.createADPCMEncoder(audioSamplesPerSec_);
+		}
+		converter_ = null;
+		if (encoder_ && encoder_.convert) {
+			converter_ = encoder_;
+		}
+		if (recorder_.TRACE) if (encoder_) recorder_.TRACE("INFO: prepared encoder: " + encoder_.version);
+		// -->
+		waveData_ = [];
 		waveFile_ = null;
 		reason_.code = 0;
 		reason_.message = "";
-		if (audioDecimatationFactor_ > 1) {
+		if (audioDecimationFactor_ > 1) {
 			if (recorder_.recorded) {
 				audioProcessor_.port.onmessage = audioProcessor_onaudioprocess_downSampling_recorded_;
 			} else {
@@ -476,88 +523,143 @@ var Recorder = function() {
 				audioProcessor_.port.onmessage = audioProcessor_onaudioprocess_;
 			}
 		}
-		navigator.mediaDevices.getUserMedia(
-			{audio: {echoCancellation: false}, video: false}
-		).then(
-			function(audioStream) {
-				audioStream.stopTracks = function() {
-					var tracks = audioStream.getTracks();
-					for (var i = 0; i < tracks.length; i++) {
-						tracks[i].stop();
+		const stopTracks = function () {
+			var tracks = this.getTracks();
+			for (var i = 0; i < tracks.length; i++) {
+				tracks[i].stop();
+			}
+			if (!recorder_.recorded) {
+				if (!encoder_) {
+					var waveDataBytes = 0;
+					for (var i = 0; i < waveData_.length; i++) {
+						waveDataBytes += waveData_[i].byteLength;
 					}
-					state_ = 0;
-					if (waveData_) {
-						var waveData = new DataView(waveData_[0]);
-						waveData.setUint8(0, 0x52); // 'R'
-						waveData.setUint8(1, 0x49); // 'I'
-						waveData.setUint8(2, 0x46); // 'F'
-						waveData.setUint8(3, 0x46); // 'F'
-						waveData.setUint32(4, waveDataBytes_ - 8, true);
-						waveData.setUint8(8, 0x57); // 'W'
-						waveData.setUint8(9, 0x41); // 'A'
-						waveData.setUint8(10, 0x56); // 'V'
-						waveData.setUint8(11, 0x45); // 'E'
-						waveData.setUint8(12, 0x66); // 'f'
-						waveData.setUint8(13, 0x6D); // 'm'
-						waveData.setUint8(14, 0x74); // 't'
-						waveData.setUint8(15, 0x20); // ' '
-						waveData.setUint32(16, 16, true);
-						waveData.setUint16(20, 1, true); // formatTag
-						waveData.setUint16(22, 1, true); // channels
-						waveData.setUint32(24, audioSamplesPerSec_, true); // samplesPerSec
-						waveData.setUint32(28, audioSamplesPerSec_ * 2 * 1, true); // bytesPseSec
-						waveData.setUint16(32, 2 * 1, true); // bytesPerSample
-						waveData.setUint16(34, 16, true); // bitsPerSample
-						waveData.setUint8(36, 0x64); // 'd'
-						waveData.setUint8(37, 0x61); // 'a'
-						waveData.setUint8(38, 0x74); // 't'
-						waveData.setUint8(39, 0x61); // 'a'
-						waveData.setUint32(40, waveDataBytes_ - 44, true);
-						waveFile_ = new Blob(waveData_, {type: "audio/wav"});
-						waveFile_.samplesPerSec = audioSamplesPerSec_;
-						waveFile_.samples = (waveDataBytes_ - 44) / (2 * 1);
-						waveData_ = null;
-						waveDataBytes_ = 0;
-					}
-					if (recorder_.pauseEnded) recorder_.pauseEnded(reason_, waveFile_);
-				};
-				if (state_ === 3) {
-					state_ = 4;
-					audioStream.stopTracks();
-					if (audioDecimatationFactor_ > 1) {
-						if (recorder_.TRACE) recorder_.TRACE("INFO: cancelled recording: " + audioContext_.sampleRate + "Hz -> " + audioSamplesPerSec_ + "Hz (" + audioProcessor_.bufferSize + " samples/buffer)");
-					} else {
-						if (recorder_.TRACE) recorder_.TRACE("INFO: cancelled recording: " + audioSamplesPerSec_ + "Hz (" + audioProcessor_.bufferSize + " samples/buffer)");
-					}
-					return;
-				}
-				state_ = 2;
-				audioStream_ = audioStream;
-				audioProvider_ = audioContext_.createMediaStreamSource(audioStream_);
-				audioProvider_.connect(audioProcessor_);
-				audioProcessor_.connect(audioContext_.destination);
-				if (audioDecimatationFactor_ > 1) {
-					if (recorder_.TRACE) recorder_.TRACE("INFO: started recording: " + audioContext_.sampleRate + "Hz -> " + audioSamplesPerSec_ + "Hz (" + audioProcessor_.bufferSize + " samples/buffer)");
+					var waveData = new Uint8Array(44);
+					waveData[ 0] = 0x52; // 'R'
+					waveData[ 1] = 0x49; // 'I'
+					waveData[ 2] = 0x46; // 'F'
+					waveData[ 3] = 0x46; // 'F'
+					waveData[ 4] = (waveDataBytes + 36) & 0xFF;
+					waveData[ 5] = ((waveDataBytes + 36) >> 8) & 0xFF;
+					waveData[ 6] = ((waveDataBytes + 36) >> 16) & 0xFF;
+					waveData[ 7] = ((waveDataBytes + 36) >> 24) & 0xFF;
+					waveData[ 8] = 0x57; // 'W'
+					waveData[ 9] = 0x41; // 'A'
+					waveData[10] = 0x56; // 'V'
+					waveData[11] = 0x45; // 'E'
+					waveData[12] = 0x66; // 'f'
+					waveData[13] = 0x6D; // 'm'
+					waveData[14] = 0x74; // 't'
+					waveData[15] = 0x20; // ' '
+					waveData[16] = 16;
+					waveData[17] = 0;
+					waveData[18] = 0;
+					waveData[19] = 0;
+					waveData[20] = 1; // formatTag
+					waveData[21] = 0;
+					waveData[22] = 1; // channels
+					waveData[23] = 0;
+					waveData[24] = audioSamplesPerSec_ & 0xFF; // samplesPerSec
+					waveData[25] = (audioSamplesPerSec_ >> 8) & 0xFF;
+					waveData[26] = (audioSamplesPerSec_ >> 16) & 0xFF;
+					waveData[27] = (audioSamplesPerSec_ >> 24) & 0xFF;
+					waveData[28] = (audioSamplesPerSec_ * 2 * 1) & 0xFF; // bytesPseSec
+					waveData[29] = ((audioSamplesPerSec_ * 2 * 1) >> 8) & 0xFF;
+					waveData[30] = ((audioSamplesPerSec_ * 2 * 1) >> 16) & 0xFF;
+					waveData[31] = ((audioSamplesPerSec_ * 2 * 1) >> 24) & 0xFF;
+					waveData[32] = 2 * 1; // bytesPerSample
+					waveData[33] = 0;
+					waveData[34] = 16; // bitsPerSample
+					waveData[35] = 0;
+					waveData[36] = 0x64; // 'd'
+					waveData[37] = 0x61; // 'a'
+					waveData[38] = 0x74; // 't'
+					waveData[39] = 0x61; // 'a'
+					waveData[40] = waveDataBytes & 0xFF;
+					waveData[41] = (waveDataBytes >> 8) & 0xFF;
+					waveData[42] = (waveDataBytes >> 16) & 0xFF;
+					waveData[43] = (waveDataBytes >> 24) & 0xFF;
+					waveData_.unshift(waveData);
+					waveFile_ = new Blob(waveData_, {type: "audio/wav"});
+					waveFile_.samples = waveDataBytes / (2 * 1);
+					waveFile_.samplesPerSec = audioSamplesPerSec_;
+					waveFile_.extension = ".wav";
 				} else {
-					if (recorder_.TRACE) recorder_.TRACE("INFO: started recording: " + audioSamplesPerSec_ + "Hz (" + audioProcessor_.bufferSize + " samples/buffer)");
+					if (converter_) {
+						waveData_ = converter_.convert(waveData_);
+					}
+					waveFile_ = new Blob(waveData_, {type: encoder_.mime});
+					waveFile_.samples = encoder_.samples;
+					waveFile_.samplesPerSec = encoder_.samplesPerSec;
+					waveFile_.extension = encoder_.extension;
 				}
-				startMaxRecordingTimeTimer_();
-				// <!-- for ADPCM packing
-				ima_state_ = (recorder_.adpcmPacking) ? 1 : 0;
-				ima_state_last_ = 0;
-				ima_state_step_index_ = 0;
-				// -->
-				if (recorder_.resumeEnded) recorder_.resumeEnded(((ima_state_ > 0) ? "" : "MSB") + (audioSamplesPerSec_ / 1000 | 0) + "K");
+				waveData_ = null;
 			}
-		).catch(
-			function(error) {
-				state_ = 0;
-				if (recorder_.TRACE) recorder_.TRACE("ERROR: can't start recording (" + error.message + ")");
-				reason_.code = 2;
-				reason_.message = error.message;
-				if (recorder_.pauseEnded) recorder_.pauseEnded(reason_, waveFile_);
+			if (encoder_) {
+				encoder_.destroy();
+				encoder_ = null;
 			}
-		);
+			state_ = 0;
+			if (recorder_.pauseEnded) recorder_.pauseEnded(reason_, waveFile_);
+		};
+		try {
+			if (recorder_.recordingSource < 1 || recorder_.recordingSource > 3) {
+				recorder_.recordingSource = 1;
+			}
+			let audioStream;
+			if (recorder_.recordingSource === 1) {
+				audioStream = await navigator.mediaDevices.getUserMedia({audio: {echoCancellation: false}, video: false});
+				audioStream.stopTracks = stopTracks;
+			} else
+			if (recorder_.recordingSource === 2) {
+				audioStream = await navigator.mediaDevices.getDisplayMedia({audio: {echoCancellation: false}, video: true});
+				audioStream.stopTracks = stopTracks;
+			} else {
+				audioStream = new MediaStream();
+				audioStream.userMedia_ = await navigator.mediaDevices.getUserMedia({audio: {echoCancellation: false}, video: false});
+				audioStream.displayMedia_ = await navigator.mediaDevices.getDisplayMedia({audio: {echoCancellation: false}, video: true});
+				const destination = audioContext_.createMediaStreamDestination();
+				audioContext_.createMediaStreamSource(audioStream.userMedia_).connect(destination);
+				audioContext_.createMediaStreamSource(audioStream.displayMedia_).connect(destination);
+				audioStream.addTrack(destination.stream.getTracks()[0]);
+				audioStream.stopTracks_ = stopTracks;
+				audioStream.stopTracks = function () {
+					this.userMedia_.getTracks().forEach(track => track.stop());
+					this.displayMedia_.getTracks().forEach(track => track.stop());
+					this.stopTracks_();
+				}
+			}
+			if (state_ === 3) {
+				state_ = 4;
+				audioStream.stopTracks();
+				if (audioDecimationFactor_ > 1) {
+					if (recorder_.TRACE) recorder_.TRACE("INFO: cancelled recording: " + audioContext_.sampleRate + "Hz -> " + audioSamplesPerSec_ + "Hz (" + audioProcessor_.bufferSize + " samples/buffer)");
+				} else {
+					if (recorder_.TRACE) recorder_.TRACE("INFO: cancelled recording: " + audioSamplesPerSec_ + "Hz (" + audioProcessor_.bufferSize + " samples/buffer)");
+				}
+				return false;
+			}
+			state_ = 2;
+			audioStream_ = audioStream;
+			audioProvider_ = audioContext_.createMediaStreamSource(audioStream_);
+			audioProvider_.connect(audioProcessor_);
+			audioProcessor_.connect(audioContext_.destination);
+			if (audioDecimationFactor_ > 1) {
+				if (recorder_.TRACE) recorder_.TRACE("INFO: started recording: " + audioContext_.sampleRate + "Hz -> " + audioSamplesPerSec_ + "Hz (" + audioProcessor_.bufferSize + " samples/buffer)");
+			} else {
+				if (recorder_.TRACE) recorder_.TRACE("INFO: started recording: " + audioSamplesPerSec_ + "Hz (" + audioProcessor_.bufferSize + " samples/buffer)");
+			}
+			startMaxRecordingTimeTimer_();
+			var bytesPerSec = (encoder_) ? encoder_.bytesPerSec : audioSamplesPerSec_ * 2;
+			var framesPerSec = (encoder_) ? encoder_.framesPerSec : 0;
+			if (recorder_.resumeEnded) recorder_.resumeEnded(((encoder_) ? "" : "LSB") + (audioSamplesPerSec_ / 1000 | 0) + "K", bytesPerSec, framesPerSec);
+		} catch (error) {
+			state_ = 0;
+			if (recorder_.TRACE) recorder_.TRACE("ERROR: can't start recording (" + error.message + ")");
+			reason_.code = 2;
+			reason_.message = error.message;
+			if (recorder_.pauseEnded) recorder_.pauseEnded(reason_, waveFile_);
+		}
 		return true;
 	}
 
@@ -576,6 +678,11 @@ var Recorder = function() {
 	// 録音中かどうかの取得
 	function isActive_() {
 		return (state_ === 2);
+	}
+
+	// コンバーダの取得
+	function getConverter_() {
+		return converter_;
 	}
 
 	// 録音の停止を自動的に行うためのタイマの開始
@@ -605,109 +712,12 @@ var Recorder = function() {
 		pause_();
 	}
 
-	// <!-- for ADPCM packing
-	var ima_step_size_table_ = [
-		7, 8, 9, 10, 11, 12, 13, 14, 16, 17,
-		19, 21, 23, 25, 28, 31, 34, 37, 41, 45,
-		50, 55, 60, 66, 73, 80, 88, 97, 107, 118,
-		130, 143, 157, 173, 190, 209, 230, 253, 279, 307,
-		337, 371, 408, 449, 494, 544, 598, 658, 724, 796,
-		876, 963, 1060, 1166, 1282, 1411, 1552, 1707, 1878, 2066,
-		2272, 2499, 2749, 3024, 3327, 3660, 4026, 4428, 4871, 5358,
-		5894, 6484, 7132, 7845, 8630, 9493, 10442, 11487, 12635, 13899,
-		15289, 16818, 18500, 20350, 22385, 24623, 27086, 29794, 32767
-	];
-	var ima_step_adjust_table_ = [
-		-1, -1, -1, -1, 2, 4, 6, 8
-	]
-	var ima_state_;
-	var ima_state_last_;
-	var ima_state_step_index_;
-	function linear2ima_(pcm) {
-		var step_size = ima_step_size_table_[ima_state_step_index_];
-		var diff = pcm - ima_state_last_;
-		var ima = 0x00;
-		if (diff < 0) {
-			ima = 0x08;
-			diff = -diff;
-		}
-		var vpdiff = 0;
-		if (diff >= step_size) {
-			ima |= 0x04;
-			diff -= step_size;
-			vpdiff += step_size;
-		}
-		step_size >>= 1;
-		if (diff >= step_size) {
-			ima |= 0x02;
-			diff -= step_size;
-			vpdiff += step_size;
-		}
-		step_size >>= 1;
-		if (diff >= step_size) {
-			ima |= 0x01;
-			vpdiff += step_size;
-		}
-		step_size >>= 1;
-		vpdiff += step_size;
-		if ((ima & 0x08) != 0) {
-			ima_state_last_ -= vpdiff;
-		} else {
-			ima_state_last_ += vpdiff;
-		}
-		if (ima_state_last_ > 32767) {
-			ima_state_last_ = 32767;
-		} else
-		if (ima_state_last_ < -32768) {
-			ima_state_last_ = -32768;
-		}
-		ima_state_step_index_ += ima_step_adjust_table_[ima & 0x07];
-		if (ima_state_step_index_ < 0) {
-			ima_state_step_index_ = 0;
-		} else
-		if (ima_state_step_index_ > 88) {
-			ima_state_step_index_ = 88;
-		}
-		return ima;
+	// public プロパティの初期化
+	if (window.Encoder && window.Encoder.ADPCMEncoder) {
+		recorder_.version += " " + window.Encoder.ADPCMEncoder.version;
 	}
-	// -->
-
-	// PCM 音声データの ADPCM 音声データへの変換
-	function pack_(data) {
-		if (ima_state_ > 0) {
-			var oldData = new DataView(data.buffer, data.byteOffset, data.byteLength);
-			var dataIndex = 0;
-			if (ima_state_ === 1) {
-				data = new Uint8Array(data.buffer, data.byteOffset - 16, 16 + data.length / 4);
-				data[dataIndex++] = 0x23; // '#'
-				data[dataIndex++] = 0x21; // '!'
-				data[dataIndex++] = 0x41; // 'A'
-				data[dataIndex++] = 0x44; // 'D'
-				data[dataIndex++] = 0x50; // 'P'
-				data[dataIndex++] = 0x0A; // '\n'
-				data[dataIndex++] = audioSamplesPerSec_ & 0xFF;
-				data[dataIndex++] = (audioSamplesPerSec_ >> 8) & 0xFF;
-				data[dataIndex++] = 1;
-				data[dataIndex++] = 2;
-				data[dataIndex++] = 0;
-				data[dataIndex++] = 0;
-				data[dataIndex++] = 1;
-				data[dataIndex++] = 2;
-				data[dataIndex++] = 0;
-				data[dataIndex++] = 0;
-				ima_state_ = 2;
-			} else {
-				data = new Uint8Array(data.buffer, data.byteOffset - 16, data.length / 4);
-			}
-			for (var i = 0; i < oldData.byteLength; i += 4) {
-				var pcm1 = oldData.getInt16(i    , false);
-				var pcm2 = oldData.getInt16(i + 2, false);
-				var ima1 = linear2ima_(pcm1);
-				var ima2 = linear2ima_(pcm2);
-				data[dataIndex++] = (ima1 << 4) | ima2;
-			}
-		}
-		return data;
+	if (window.Encoder && window.Encoder.OpusEncoder) {
+		recorder_.version += " " + window.Encoder.OpusEncoder.version;
 	}
 
 	// public オブジェクトの返却

@@ -9,11 +9,11 @@ using System.Threading;
 #if !UNITY_2018_4_OR_NEWER
 [assembly: AssemblyTitle("WrpTester")]
 [assembly: AssemblyProduct("WrpTester")]
-[assembly: AssemblyCopyright("Copyright (C) 2019-2021 Advanced Media, Inc.")]
+[assembly: AssemblyCopyright("Copyright (C) 2019-2025 Advanced Media, Inc.")]
 [assembly: ComVisible(false)]
 [assembly: Guid("c7841911-a965-4734-9222-462422948eec")]
-[assembly: AssemblyVersion("1.0.03")]
-[assembly: AssemblyFileVersion("1.0.03")]
+[assembly: AssemblyVersion("1.0.06")]
+[assembly: AssemblyFileVersion("1.0.06")]
 #endif
 
 namespace WrpTester {
@@ -42,6 +42,20 @@ public class WrpTester : com.amivoice.wrp.WrpListener {
 		string keepFillerToken = null;
 		// 認識中イベント発行間隔
 		string resultUpdatedInterval = null;
+		// 最大認識処理時間
+		string maxDecodingTime = null;
+		// 最大応答時間
+		string maxResponseTime = null;
+		// 最大認識処理割合
+		string maxDecodingRate = null;
+		// 目標応答時間
+		string targetResponseTime = null;
+		// 目標認識処理割合
+		string targetDecodingRate = null;
+		// 発話検出タイムアウト
+		string noInputTimeout = null;
+		// 認識処理タイムアウト
+		string recognitionTimeout = null;
 		// 拡張情報
 		string extension = null;
 		// サービス認証キー文字列
@@ -52,6 +66,8 @@ public class WrpTester : com.amivoice.wrp.WrpListener {
 		string resultType = null;
 		// サービス認証キー文字列
 		string serviceAuthorization = null;
+		// 発話区間検出パラメータ文字列
+		string voiceDetection = null;
 		// 接続タイムアウト
 		int connectTimeout = 5000;
 		// 受信タイムアウト
@@ -63,7 +79,7 @@ public class WrpTester : com.amivoice.wrp.WrpListener {
 		// 詳細出力
 		bool verbose = false;
 		// 実装タイプ
-		int implementation = 1;
+		int implementation = 0;
 
 		// 引数のチェック
 		foreach (string arg in args) {
@@ -85,6 +101,27 @@ public class WrpTester : com.amivoice.wrp.WrpListener {
 			if (arg.StartsWith("oi=")) {
 				resultUpdatedInterval = arg.Substring(3);
 			} else
+			if (arg.StartsWith("omdt=")) {
+				maxDecodingTime = arg.Substring(5);
+			} else
+			if (arg.StartsWith("omrt=")) {
+				maxResponseTime = arg.Substring(5);
+			} else
+			if (arg.StartsWith("omdr=")) {
+				maxDecodingRate = arg.Substring(5);
+			} else
+			if (arg.StartsWith("otrt=")) {
+				targetResponseTime = arg.Substring(5);
+			} else
+			if (arg.StartsWith("otdr=")) {
+				targetDecodingRate = arg.Substring(5);
+			} else
+			if (arg.StartsWith("on=")) {
+				noInputTimeout = arg.Substring(3);
+			} else
+			if (arg.StartsWith("oo=")) {
+				recognitionTimeout = arg.Substring(3);
+			} else
 			if (arg.StartsWith("oe=")) {
 				extension = arg.Substring(3);
 			} else
@@ -99,6 +136,9 @@ public class WrpTester : com.amivoice.wrp.WrpListener {
 			} else
 			if (arg.StartsWith("u=")) {
 				serviceAuthorization = arg.Substring(2);
+			} else
+			if (arg.StartsWith("v=")) {
+				voiceDetection = arg.Substring(2);
 			} else
 			if (arg.StartsWith("-x")) {
 				proxyServerName = arg.Substring(2);
@@ -121,6 +161,9 @@ public class WrpTester : com.amivoice.wrp.WrpListener {
 			} else
 			if (arg.StartsWith("-v")) {
 				verbose = true;
+			} else
+			if (arg.StartsWith("-1")) {
+				implementation = 1;
 			} else
 			if (arg.StartsWith("-2")) {
 				implementation = 2;
@@ -148,11 +191,19 @@ public class WrpTester : com.amivoice.wrp.WrpListener {
 			Console.WriteLine("  op=<segmenterProperties>");
 			Console.WriteLine("  of=<keepFillerToken>");
 			Console.WriteLine("  oi=<resultUpdatedInterval>");
+			Console.WriteLine("  omdt=<maxDecodingTime>");
+			Console.WriteLine("  omrt=<maxResponseTime>");
+			Console.WriteLine("  omdr=<maxDecodingRate>");
+			Console.WriteLine("  otrt=<targetResponseTime>");
+			Console.WriteLine("  otdr=<targetDecodingRate>");
+			Console.WriteLine("  on=<noInputTimeout>");
+			Console.WriteLine("  oo=<recognitionTimeout>");
 			Console.WriteLine("  oe=<extension>");
 			Console.WriteLine("  ou=<authorization>");
 			Console.WriteLine("  c=<codec>");
 			Console.WriteLine("  r=<resultType>");
 			Console.WriteLine("  u=<serviceAuthorization>");
+			Console.WriteLine("  v=<voiceDetection>");
 			Console.WriteLine("Options:");
 			Console.WriteLine("  -x<proxyServerName>         (default: -x)");
 			Console.WriteLine("  -c<connectionTimeout>       (default: -c5000)");
@@ -207,11 +258,19 @@ public class WrpTester : com.amivoice.wrp.WrpListener {
 		wrp.setSegmenterProperties(segmenterProperties);
 		wrp.setKeepFillerToken(keepFillerToken);
 		wrp.setResultUpdatedInterval(resultUpdatedInterval);
+		wrp.setMaxDecodingTime(maxDecodingTime);
+		wrp.setMaxResponseTime(maxResponseTime);
+		wrp.setMaxDecodingRate(maxDecodingRate);
+		wrp.setTargetResponseTime(targetResponseTime);
+		wrp.setTargetDecodingRate(targetDecodingRate);
+		wrp.setNoInputTimeout(noInputTimeout);
+		wrp.setRecognitionTimeout(recognitionTimeout);
 		wrp.setExtension(extension);
 		wrp.setAuthorization(authorization);
 		wrp.setCodec(codec);
 		wrp.setResultType(resultType);
 		wrp.setServiceAuthorization(serviceAuthorization);
+		wrp.setVoiceDetection(voiceDetection);
 
 		// WebSocket 音声認識サーバへの接続
 		if (!wrp.connect()) {

@@ -21,6 +21,18 @@ public class HrpTester implements com.amivoice.hrp.HrpListener {
 		String keepFillerToken = null;
 		// 認識中イベント発行間隔
 		String resultUpdatedInterval = null;
+		// 最大認識処理時間
+		String maxDecodingTime = null;
+		// 最大応答時間
+		String maxResponseTime = null;
+		// 最大認識処理割合
+		String maxDecodingRate = null;
+		// 目標応答時間
+		String targetResponseTime = null;
+		// 目標認識処理割合
+		String targetDecodingRate = null;
+		// 認識処理タイムアウト
+		String recognitionTimeout = null;
 		// 拡張情報
 		String extension = null;
 		// サービス認証キー文字列
@@ -54,7 +66,7 @@ public class HrpTester implements com.amivoice.hrp.HrpListener {
 		// 詳細出力
 		boolean verbose = false;
 		// 実装タイプ
-		int implementation = 1;
+		int implementation = 0;
 
 		// 引数のチェック
 		for (String arg: args) {
@@ -75,6 +87,24 @@ public class HrpTester implements com.amivoice.hrp.HrpListener {
 			} else
 			if (arg.startsWith("oi=")) {
 				resultUpdatedInterval = arg.substring(3);
+			} else
+			if (arg.startsWith("omdt=")) {
+				maxDecodingTime = arg.substring(5);
+			} else
+			if (arg.startsWith("omrt=")) {
+				maxResponseTime = arg.substring(5);
+			} else
+			if (arg.startsWith("omdr=")) {
+				maxDecodingRate = arg.substring(5);
+			} else
+			if (arg.startsWith("otrt=")) {
+				targetResponseTime = arg.substring(5);
+			} else
+			if (arg.startsWith("otdr=")) {
+				targetDecodingRate = arg.substring(5);
+			} else
+			if (arg.startsWith("oo=")) {
+				recognitionTimeout = arg.substring(3);
 			} else
 			if (arg.startsWith("oe=")) {
 				extension = arg.substring(3);
@@ -134,6 +164,9 @@ public class HrpTester implements com.amivoice.hrp.HrpListener {
 			if (arg.startsWith("-v")) {
 				verbose = true;
 			} else
+			if (arg.startsWith("-1")) {
+				implementation = 1;
+			} else
 			if (arg.startsWith("-2")) {
 				implementation = 2;
 			} else
@@ -157,6 +190,12 @@ public class HrpTester implements com.amivoice.hrp.HrpListener {
 			System.out.println("  op=<segmenterProperties>");
 			System.out.println("  of=<keepFillerToken>");
 			System.out.println("  oi=<resultUpdatedInterval>");
+			System.out.println("  omdt=<maxDecodingTime>");
+			System.out.println("  omrt=<maxResponseTime>");
+			System.out.println("  omdr=<maxDecodingRate>");
+			System.out.println("  otrt=<targetResponseTime>");
+			System.out.println("  otdr=<targetDecodingRate>");
+			System.out.println("  oo=<recognitionTimeout>");
 			System.out.println("  oe=<extension>");
 			System.out.println("  ou=<authorization>");
 			System.out.println("  d=<domainId>");
@@ -227,6 +266,12 @@ public class HrpTester implements com.amivoice.hrp.HrpListener {
 		hrp.setSegmenterProperties(segmenterProperties);
 		hrp.setKeepFillerToken(keepFillerToken);
 		hrp.setResultUpdatedInterval(resultUpdatedInterval);
+		hrp.setMaxDecodingTime(maxDecodingTime);
+		hrp.setMaxResponseTime(maxResponseTime);
+		hrp.setMaxDecodingRate(maxDecodingRate);
+		hrp.setTargetResponseTime(targetResponseTime);
+		hrp.setTargetDecodingRate(targetDecodingRate);
+		hrp.setRecognitionTimeout(recognitionTimeout);
 		hrp.setExtension(extension);
 		hrp.setAuthorization(authorization);
 		hrp.setDomainId(domainId);
@@ -303,10 +348,6 @@ public class HrpTester implements com.amivoice.hrp.HrpListener {
 
 					// 音声データファイルの総バイト数の取得
 					long audioDataBytes = new File(audioFileName).length();
-					if (audioDataBytes == 0) {
-						System.out.println("音声データファイル " + audioFileName + " の読み込みに失敗しました。");
-						break;
-					}
 
 					// HTTP 音声認識サーバへの音声データの送信の開始
 					if (!hrp.feedDataResume(type, audioDataBytes)) {
